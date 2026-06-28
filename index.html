@@ -33,11 +33,94 @@
       font: inherit;
     }
 
+    .countdown-bar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 10px 18px;
+      border-bottom: 1px solid #d6cfbf;
+      background: #fff8dc;
+      box-shadow: 0 8px 24px rgba(40, 37, 28, 0.08);
+    }
+
+    .countdown-bar.warning {
+      background: #fff0ba;
+      border-bottom-color: #d9a520;
+    }
+
+    .countdown-bar.urgent {
+      background: #b8483b;
+      color: #fff;
+      border-bottom-color: #8d3128;
+    }
+
+    .countdown-main {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .countdown-label {
+      font-size: 13px;
+      font-weight: 900;
+      color: inherit;
+      white-space: nowrap;
+    }
+
+    .countdown-time {
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(30px, 4vw, 48px);
+      line-height: 1;
+      font-weight: 950;
+      letter-spacing: 0;
+    }
+
+    .countdown-controls {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .countdown-controls label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0;
+      font-size: 12px;
+      font-weight: 800;
+      color: inherit;
+      white-space: nowrap;
+    }
+
+    .countdown-controls input {
+      width: 70px;
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 8px;
+      background: #fffdf8;
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .countdown-controls button {
+      min-height: 34px;
+      padding: 6px 11px;
+      font-size: 13px;
+    }
+
     .app {
       display: grid;
       grid-template-columns: minmax(270px, 330px) minmax(0, 1fr) minmax(230px, 280px);
       gap: 18px;
-      min-height: 100vh;
+      min-height: calc(100vh - 78px);
       padding: 18px;
     }
 
@@ -625,6 +708,7 @@
     @media (max-height: 820px) and (min-width: 761px) {
       .app {
         padding: 12px;
+        min-height: calc(100vh - 70px);
       }
 
       .sidebar,
@@ -651,8 +735,8 @@
 
       #names {
         min-height: 128px;
-        height: 24vh;
-        max-height: 190px;
+        height: 20vh;
+        max-height: 165px;
       }
 
       .actions {
@@ -665,9 +749,21 @@
     }
 
     @media (max-width: 760px) {
+      .countdown-bar {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 10px 12px;
+      }
+
+      .countdown-main,
+      .countdown-controls {
+        justify-content: space-between;
+      }
+
       .app {
         grid-template-columns: 1fr;
         padding: 12px;
+        min-height: auto;
       }
 
       .sidebar,
@@ -692,6 +788,20 @@
   </style>
 </head>
 <body>
+  <section id="countdownBar" class="countdown-bar" aria-live="polite">
+    <div class="countdown-main">
+      <div class="countdown-label">討論倒計時</div>
+      <div id="countdownTime" class="countdown-time">10:00</div>
+    </div>
+    <div class="countdown-controls">
+      <label for="timerMinutes">分鐘
+        <input id="timerMinutes" type="number" min="1" max="180" value="10">
+      </label>
+      <button id="timerStartBtn">開始</button>
+      <button id="timerResetBtn" class="ghost">重置</button>
+    </div>
+  </section>
+
   <main class="app">
     <aside class="sidebar">
       <h1>分組換桌安排器</h1>
@@ -807,6 +917,11 @@ Peter</textarea>
 
   <script>
     const els = {
+      countdownBar: document.querySelector("#countdownBar"),
+      countdownTime: document.querySelector("#countdownTime"),
+      timerMinutes: document.querySelector("#timerMinutes"),
+      timerStartBtn: document.querySelector("#timerStartBtn"),
+      timerResetBtn: document.querySelector("#timerResetBtn"),
       names: document.querySelector("#names"),
       tableCount: document.querySelector("#tableCount"),
       searchMode: document.querySelector("#searchMode"),
@@ -846,6 +961,10 @@ Peter</textarea>
       mapEditing: false,
       mapHeight: 360,
       mapZoom: 1,
+      timerSeconds: 600,
+      timerRunning: false,
+      timerEndsAt: null,
+      timerId: null,
       drag: null
     };
 
@@ -855,6 +974,66 @@ Peter</textarea>
         .map(name => name.trim())
         .filter(Boolean);
       return [...new Set(raw)];
+    }
+
+    function formatTime(totalSeconds) {
+      const seconds = Math.max(0, Math.ceil(totalSeconds));
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+    }
+
+    function renderTimer() {
+      els.countdownTime.textContent = formatTime(state.timerSeconds);
+      els.timerStartBtn.textContent = state.timerRunning ? "暫停" : "開始";
+      els.countdownBar.classList.toggle("warning", state.timerSeconds <= 300 && state.timerSeconds > 60);
+      els.countdownBar.classList.toggle("urgent", state.timerSeconds <= 60);
+    }
+
+    function setTimerFromInput() {
+      const minutes = Math.max(1, Math.min(Number(els.timerMinutes.value) || 10, 180));
+      els.timerMinutes.value = minutes;
+      state.timerSeconds = minutes * 60;
+      state.timerEndsAt = null;
+      renderTimer();
+    }
+
+    function tickTimer() {
+      if (!state.timerRunning || !state.timerEndsAt) return;
+      state.timerSeconds = Math.max(0, (state.timerEndsAt - Date.now()) / 1000);
+      if (state.timerSeconds <= 0) {
+        state.timerRunning = false;
+        clearInterval(state.timerId);
+        state.timerId = null;
+      }
+      renderTimer();
+    }
+
+    function toggleTimer() {
+      if (state.timerRunning) {
+        if (state.timerEndsAt) {
+          state.timerSeconds = Math.max(0, (state.timerEndsAt - Date.now()) / 1000);
+        }
+        state.timerRunning = false;
+        clearInterval(state.timerId);
+        state.timerId = null;
+        renderTimer();
+        return;
+      }
+
+      if (state.timerSeconds <= 0) setTimerFromInput();
+      state.timerRunning = true;
+      state.timerEndsAt = Date.now() + state.timerSeconds * 1000;
+      clearInterval(state.timerId);
+      state.timerId = setInterval(tickTimer, 250);
+      tickTimer();
+    }
+
+    function resetTimer() {
+      state.timerRunning = false;
+      clearInterval(state.timerId);
+      state.timerId = null;
+      setTimerFromInput();
     }
 
     function pairKey(a, b) {
@@ -1616,6 +1795,10 @@ Peter</textarea>
       resetState();
       render();
     });
+    els.timerStartBtn.addEventListener("click", toggleTimer);
+    els.timerResetBtn.addEventListener("click", resetTimer);
+    els.timerMinutes.addEventListener("input", resetTimer);
+    els.timerMinutes.addEventListener("change", resetTimer);
     els.copyBtn.addEventListener("click", copyRecords);
     els.editMapBtn.addEventListener("click", () => {
       state.mapEditing = !state.mapEditing;
@@ -1648,6 +1831,7 @@ Peter</textarea>
     });
 
     render();
+    renderTimer();
   </script>
 </body>
 </html>
