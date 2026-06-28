@@ -107,7 +107,8 @@
 
     textarea {
       width: 100%;
-      min-height: 280px;
+      min-height: 150px;
+      height: clamp(170px, 29vh, 245px);
       resize: vertical;
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -115,6 +116,11 @@
       background: #fffdf8;
       line-height: 1.45;
       color: var(--ink);
+    }
+
+    #exportBox {
+      min-height: 120px;
+      height: auto;
     }
 
     input[type="number"] {
@@ -616,6 +622,48 @@
       }
     }
 
+    @media (max-height: 820px) and (min-width: 761px) {
+      .app {
+        padding: 12px;
+      }
+
+      .sidebar,
+      .table-panel {
+        max-height: calc(100vh - 24px);
+      }
+
+      .sidebar {
+        padding: 12px;
+      }
+
+      .sidebar h1 {
+        font-size: 21px;
+      }
+
+      .sidebar .subtle {
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .sidebar label {
+        margin: 9px 0 5px;
+      }
+
+      #names {
+        min-height: 128px;
+        height: 24vh;
+        max-height: 190px;
+      }
+
+      .actions {
+        margin-top: 10px;
+      }
+
+      .secondary-actions {
+        margin-top: 8px;
+      }
+    }
+
     @media (max-width: 760px) {
       .app {
         grid-template-columns: 1fr;
@@ -629,7 +677,8 @@
       }
 
       textarea {
-        min-height: 210px;
+        min-height: 170px;
+        height: 210px;
       }
 
       .topbar {
