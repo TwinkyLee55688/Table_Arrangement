@@ -1,0 +1,1604 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分組換桌安排器</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f5ef;
+      --panel: #ffffff;
+      --ink: #252523;
+      --muted: #6c6a62;
+      --line: #ddd8cb;
+      --accent: #197a7a;
+      --accent-2: #b8483b;
+      --table: #f0ece1;
+      --seat: #ffffff;
+      --shadow: 0 12px 30px rgba(40, 37, 28, 0.09);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: minmax(270px, 330px) minmax(0, 1fr) minmax(230px, 280px);
+      gap: 18px;
+      min-height: 100vh;
+      padding: 18px;
+    }
+
+    .sidebar,
+    .tracker,
+    .table-panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      overflow: auto;
+    }
+
+    .sidebar,
+    .table-panel {
+      max-height: calc(100vh - 36px);
+    }
+
+    .tracker {
+      max-height: none;
+    }
+
+    .table-panel {
+      padding: 12px;
+    }
+
+    .stage {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    h1, h2, h3, p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 24px;
+      line-height: 1.15;
+      margin-bottom: 6px;
+    }
+
+    h2 {
+      font-size: 15px;
+      margin-bottom: 10px;
+    }
+
+    h3 {
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .subtle {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      margin: 14px 0 7px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 280px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 11px 12px;
+      background: #fffdf8;
+      line-height: 1.45;
+      color: var(--ink);
+    }
+
+    input[type="number"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 11px;
+      background: #fffdf8;
+      color: var(--ink);
+    }
+
+    .mode-box {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 11px;
+      background: #fffdf8;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 44px;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .secondary-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      min-height: 42px;
+      padding: 9px 12px;
+      cursor: pointer;
+      font-weight: 800;
+      color: #fff;
+      background: var(--accent);
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+
+    button:hover { filter: brightness(0.96); }
+    button:active { transform: translateY(1px); }
+
+    .icon-button {
+      font-size: 20px;
+      line-height: 1;
+      padding-bottom: 12px;
+    }
+
+    .ghost {
+      background: #ece6d9;
+      color: var(--ink);
+    }
+
+    .danger {
+      background: var(--accent-2);
+    }
+
+    .attention {
+      background: var(--accent-2);
+      color: #fff;
+    }
+
+    .topbar {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .round-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: #fffdf8;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .pill strong {
+      color: var(--ink);
+    }
+
+    .tables {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      align-content: start;
+    }
+
+    .venue {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .venue-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .toolstrip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .toolstrip button {
+      min-height: 34px;
+      padding: 7px 10px;
+      font-size: 13px;
+    }
+
+    .finder {
+      width: min(100%, 170px);
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 7px 9px;
+      background: #fffdf8;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .size-control {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 8px;
+      background: #fffdf8;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .size-control input {
+      width: 86px;
+      accent-color: var(--accent);
+    }
+
+    .toolstrip button.active {
+      background: var(--accent);
+      color: #fff;
+      outline: 2px solid rgba(25, 122, 122, 0.32);
+      outline-offset: 2px;
+    }
+
+    .floor-plan {
+      position: relative;
+      height: var(--floor-height, 360px);
+      overflow: hidden;
+      border: 1px solid #d6cfbf;
+      border-radius: 8px;
+      background:
+        linear-gradient(rgba(37, 37, 35, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(37, 37, 35, 0.045) 1px, transparent 1px),
+        #fbfaf6;
+      background-size: 28px 28px;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .floor-plan.editing {
+      border-color: var(--accent);
+      background:
+        linear-gradient(rgba(25, 122, 122, 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(25, 122, 122, 0.07) 1px, transparent 1px),
+        #f4fffb;
+      background-size: 28px 28px;
+    }
+
+    .floor-label {
+      position: absolute;
+      left: 12px;
+      bottom: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      pointer-events: none;
+    }
+
+    .map-table {
+      position: absolute;
+      width: 150px;
+      height: 88px;
+      left: 0;
+      top: 0;
+      display: grid;
+      place-items: center;
+      border: 2px solid #958c7b;
+      background: #ece7da;
+      color: #28251f;
+      box-shadow: 0 8px 18px rgba(40, 37, 28, 0.13);
+      cursor: pointer;
+      padding: 8px;
+      transform-origin: center;
+    }
+
+    .map-table.round {
+      width: 124px;
+      height: 124px;
+      border-radius: 999px;
+      padding: 14px;
+    }
+
+    .map-table.long {
+      border-radius: 12px;
+    }
+
+    .map-table.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(25, 122, 122, 0.18), 0 8px 18px rgba(40, 37, 28, 0.13);
+    }
+
+    .map-table.found {
+      border-color: #c28d1d;
+      background: #fff0ba;
+      box-shadow: 0 0 0 5px rgba(194, 141, 29, 0.22), 0 8px 18px rgba(40, 37, 28, 0.13);
+    }
+
+    .map-table.dragging {
+      cursor: grabbing;
+      z-index: 5;
+    }
+
+    .map-table strong {
+      font-size: 15px;
+      line-height: 1;
+    }
+
+    .map-table span {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      margin-top: 4px;
+      text-align: center;
+    }
+
+    .map-table-content {
+      width: 100%;
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+      justify-items: center;
+    }
+
+    .map-names {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 3px 6px;
+      font-weight: 700;
+      line-height: 1.12;
+      text-align: center;
+      color: #343028;
+    }
+
+    .map-table.round .map-names {
+      grid-template-columns: 1fr;
+      gap: 1px;
+    }
+
+    .map-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .table-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+      min-height: 230px;
+    }
+
+    .table-panel .tables {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .table-panel .table-card {
+      padding: 9px;
+      min-height: 0;
+      box-shadow: none;
+    }
+
+    .table-panel .table-card h2 {
+      margin-bottom: 2px;
+      font-size: 14px;
+    }
+
+    .table-panel .table-card .subtle {
+      font-size: 12px;
+    }
+
+    .table-panel .table-top {
+      display: none;
+    }
+
+    .table-panel .seats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 5px;
+      margin-top: 8px;
+    }
+
+    .table-panel .seat {
+      min-height: 32px;
+      padding: 5px 6px;
+      border-radius: 6px;
+    }
+
+    .table-panel .seat strong {
+      font-size: 12px;
+      line-height: 1.15;
+    }
+
+    .table-panel .seat span {
+      display: none;
+    }
+
+    .table-top {
+      height: 88px;
+      border-radius: 999px;
+      background: var(--table);
+      border: 1px solid #d2cab8;
+      display: grid;
+      place-items: center;
+      margin: 10px 8px 18px;
+      position: relative;
+    }
+
+    .table-name {
+      font-weight: 900;
+      color: #454139;
+    }
+
+    .seats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+      gap: 8px;
+    }
+
+    .seat {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--seat);
+      padding: 8px 9px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2px;
+    }
+
+    .seat strong {
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+
+    .seat span {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .repeat {
+      border-color: rgba(184, 72, 59, 0.45);
+      background: #fff4ef;
+    }
+
+    .empty {
+      min-height: 430px;
+      background: var(--panel);
+      border: 1px dashed #c9c1af;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 28px;
+      color: var(--muted);
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .record {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fffdf8;
+      padding: 9px 10px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .record strong {
+      display: block;
+      margin-bottom: 3px;
+      overflow-wrap: anywhere;
+    }
+
+    .record small {
+      color: var(--muted);
+    }
+
+    .pair {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      border-bottom: 1px solid var(--line);
+      padding: 8px 0;
+      font-size: 13px;
+    }
+
+    .pair:last-child {
+      border-bottom: 0;
+    }
+
+    .pair em {
+      font-style: normal;
+      color: var(--accent-2);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .notice {
+      display: none;
+      margin-top: 10px;
+      border-radius: 8px;
+      background: #fff2c4;
+      border: 1px solid #e9ce70;
+      padding: 9px 10px;
+      color: #5e4b09;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .notice.show {
+      display: block;
+    }
+
+    @media (max-width: 1050px) {
+      .app {
+        grid-template-columns: 300px minmax(0, 1fr);
+      }
+
+      .table-panel {
+        grid-column: 1 / -1;
+        max-height: none;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        grid-template-columns: 1fr;
+        padding: 12px;
+      }
+
+      .sidebar,
+      .tracker,
+      .table-panel {
+        max-height: none;
+      }
+
+      textarea {
+        min-height: 210px;
+      }
+
+      .topbar {
+        align-items: stretch;
+      }
+
+      .stats {
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <aside class="sidebar">
+      <h1>分組換桌安排器</h1>
+      <p class="subtle">輸入人名、設定桌數，每按一次 Next 就產生下一輪。系統會盡量避免同桌重複，並追蹤每個人的桌次。</p>
+
+      <label for="names">人名（一行一位，或用逗號分隔）</label>
+      <textarea id="names" spellcheck="false">Amy
+Ben
+Carol
+David
+Eva
+Frank
+Grace
+Henry
+Ivy
+Jack
+Kelly
+Leo
+Mia
+Noah
+Olivia
+Peter</textarea>
+
+      <div class="row">
+        <div>
+          <label for="tableCount">桌數</label>
+          <input id="tableCount" type="number" min="1" max="40" value="4">
+        </div>
+        <div>
+          <label>搜尋模式</label>
+          <div class="mode-box" id="searchMode">自適應找 0 重複</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="nextBtn">Next</button>
+        <button id="undoBtn" class="ghost icon-button" title="回上一輪" aria-label="回上一輪">↶</button>
+      </div>
+      <div class="secondary-actions">
+        <button id="resetBtn" class="danger">Reset</button>
+        <button id="copyBtn" class="ghost">複製紀錄</button>
+      </div>
+
+      <div id="notice" class="notice"></div>
+      <textarea id="exportBox" readonly aria-label="匯出紀錄" style="display: none; min-height: 120px; margin-top: 10px;"></textarea>
+    </aside>
+
+    <section class="stage">
+      <header class="topbar">
+        <div class="round-title">
+          <h2 id="roundTitle">尚未開始</h2>
+          <p id="roundNote" class="subtle">按下 Next 產生第一輪座位。</p>
+        </div>
+        <div class="stats" aria-live="polite">
+          <span class="pill">人數 <strong id="peopleStat">16</strong></span>
+          <span class="pill">桌數 <strong id="tablesStat">4</strong></span>
+          <span class="pill">本輪重複 <strong id="roundRepeatStat">0</strong></span>
+          <span class="pill">總重複 <strong id="totalRepeatStat">0</strong></span>
+        </div>
+      </header>
+
+      <section class="venue">
+        <div class="venue-head">
+          <div>
+            <h2>場地示意圖</h2>
+            <p class="subtle">選取桌子後可切換形狀、旋轉；開啟編輯後可拖曳位置。</p>
+          </div>
+          <div class="toolstrip">
+            <input id="findPerson" class="finder" type="search" placeholder="找人或桌號">
+            <label class="size-control" for="mapSize">高度
+              <input id="mapSize" type="range" min="280" max="620" step="20" value="360">
+            </label>
+            <label class="size-control" for="mapZoom">縮放
+              <input id="mapZoom" type="range" min="70" max="140" step="5" value="100">
+            </label>
+            <button id="editMapBtn" class="attention">編輯位置</button>
+            <button id="shapeBtn" class="ghost">切換形狀</button>
+            <button id="rotateLeftBtn" class="ghost" title="左轉" aria-label="左轉">↺</button>
+            <button id="rotateRightBtn" class="ghost" title="右轉" aria-label="右轉">↻</button>
+            <button id="resetMapBtn" class="ghost">重置場地</button>
+          </div>
+        </div>
+        <div id="floorPlan" class="floor-plan" aria-label="可互動場地示意圖">
+          <div id="finderStatus" class="floor-label">入口 / Reception</div>
+        </div>
+      </section>
+
+      <aside class="tracker">
+        <h2>追蹤紀錄</h2>
+        <section>
+          <h3>個人桌次</h3>
+          <div id="personHistory" class="list"></div>
+        </section>
+        <section>
+          <h3>重複同桌配對</h3>
+          <div id="repeatPairs" class="list"></div>
+        </section>
+      </aside>
+    </section>
+
+    <aside class="table-panel">
+      <h2>桌次名單</h2>
+      <div id="tables" class="tables">
+        <div class="empty">
+          <div>
+            <h2>準備開始</h2>
+            <p class="subtle">你可以先修改左側名單與桌數，再按 Next。</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const els = {
+      names: document.querySelector("#names"),
+      tableCount: document.querySelector("#tableCount"),
+      searchMode: document.querySelector("#searchMode"),
+      nextBtn: document.querySelector("#nextBtn"),
+      undoBtn: document.querySelector("#undoBtn"),
+      resetBtn: document.querySelector("#resetBtn"),
+      copyBtn: document.querySelector("#copyBtn"),
+      editMapBtn: document.querySelector("#editMapBtn"),
+      shapeBtn: document.querySelector("#shapeBtn"),
+      rotateLeftBtn: document.querySelector("#rotateLeftBtn"),
+      rotateRightBtn: document.querySelector("#rotateRightBtn"),
+      resetMapBtn: document.querySelector("#resetMapBtn"),
+      findPerson: document.querySelector("#findPerson"),
+      mapSize: document.querySelector("#mapSize"),
+      mapZoom: document.querySelector("#mapZoom"),
+      floorPlan: document.querySelector("#floorPlan"),
+      notice: document.querySelector("#notice"),
+      exportBox: document.querySelector("#exportBox"),
+      roundTitle: document.querySelector("#roundTitle"),
+      roundNote: document.querySelector("#roundNote"),
+      peopleStat: document.querySelector("#peopleStat"),
+      tablesStat: document.querySelector("#tablesStat"),
+      roundRepeatStat: document.querySelector("#roundRepeatStat"),
+      totalRepeatStat: document.querySelector("#totalRepeatStat"),
+      tables: document.querySelector("#tables"),
+      personHistory: document.querySelector("#personHistory"),
+      repeatPairs: document.querySelector("#repeatPairs")
+    };
+
+    const state = {
+      rounds: [],
+      pairCounts: new Map(),
+      personTables: new Map(),
+      activeNamesKey: "",
+      venueTables: [],
+      selectedTable: 1,
+      mapEditing: false,
+      mapHeight: 360,
+      mapZoom: 1,
+      drag: null
+    };
+
+    function parseNames() {
+      const raw = els.names.value
+        .split(/[\n,，、]+/)
+        .map(name => name.trim())
+        .filter(Boolean);
+      return [...new Set(raw)];
+    }
+
+    function pairKey(a, b) {
+      return [a, b].sort((x, y) => x.localeCompare(y, "zh-Hant")).join("|||");
+    }
+
+    function shuffle(list) {
+      const arr = [...list];
+      for (let i = arr.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function getCapacities(totalPeople, tableCount) {
+      const base = Math.floor(totalPeople / tableCount);
+      const extra = totalPeople % tableCount;
+      return Array.from({ length: tableCount }, (_, index) => base + (index < extra ? 1 : 0));
+    }
+
+    function defaultVenueTable(index, count) {
+      const columns = Math.ceil(Math.sqrt(count));
+      const rows = Math.ceil(count / columns);
+      const col = index % columns;
+      const row = Math.floor(index / columns);
+      return {
+        id: index + 1,
+        x: 18 + ((col + 0.5) / columns) * 70,
+        y: 16 + ((row + 0.5) / rows) * 62,
+        angle: 0,
+        shape: index % 2 === 0 ? "long" : "round"
+      };
+    }
+
+    function syncVenueTables(tableCount) {
+      const current = new Map(state.venueTables.map(table => [table.id, table]));
+      state.venueTables = Array.from({ length: tableCount }, (_, index) => {
+        const id = index + 1;
+        return current.get(id) || defaultVenueTable(index, tableCount);
+      });
+
+      if (state.selectedTable > tableCount) state.selectedTable = tableCount;
+      if (!state.selectedTable && tableCount) state.selectedTable = 1;
+    }
+
+    function resetVenueLayout() {
+      const tableCount = Math.max(1, Math.min(Number(els.tableCount.value) || 1, parseNames().length || 1));
+      state.venueTables = Array.from({ length: tableCount }, (_, index) => defaultVenueTable(index, tableCount));
+      state.selectedTable = Math.min(state.selectedTable || 1, tableCount);
+      renderVenueMap();
+    }
+
+    function selectedVenueTable() {
+      return state.venueTables.find(table => table.id === state.selectedTable);
+    }
+
+    function rotateSelectedTable(delta) {
+      const table = selectedVenueTable();
+      if (!table) return;
+      table.angle = (table.angle + delta + 360) % 360;
+      renderVenueMap();
+    }
+
+    function toggleSelectedShape() {
+      const table = selectedVenueTable();
+      if (!table) return;
+      table.shape = table.shape === "long" ? "round" : "long";
+      renderVenueMap();
+    }
+
+    function getTableMemberCount(tableId) {
+      const round = state.rounds.at(-1);
+      return round?.tables[tableId - 1]?.length || 0;
+    }
+
+    function getTableMembers(tableId) {
+      const round = state.rounds.at(-1);
+      return round?.tables[tableId - 1] || [];
+    }
+
+    function tableTransform(table) {
+      return `translate(-50%, -50%) rotate(${table.angle}deg) scale(${state.mapZoom})`;
+    }
+
+    function getMapNameFontSize(members, shape) {
+      if (!members.length) return 10;
+      const longest = Math.max(...members.map(name => Array.from(name).length));
+      const base = shape === "round" ? 11 : 12;
+      const crowdPenalty = Math.max(0, members.length - 4) * 0.9;
+      const lengthPenalty = Math.max(0, longest - 6) * 0.55;
+      return Math.max(7.5, Math.min(base, base - crowdPenalty - lengthPenalty));
+    }
+
+    function findTableFromQuery() {
+      const query = els.findPerson.value.trim().toLowerCase();
+      const round = state.rounds.at(-1);
+      if (!query) return { tableId: null, label: "入口 / Reception" };
+
+      const tableMatch = query.match(/^t(?:able)?\s*(\d+)$/i) || query.match(/^桌\s*(\d+)$/);
+      if (tableMatch) {
+        const tableId = Number(tableMatch[1]);
+        if (state.venueTables.some(table => table.id === tableId)) {
+          return { tableId, label: `已標示 Table ${tableId}` };
+        }
+      }
+
+      if (!round) return { tableId: null, label: "先按 Next 產生座位，再搜尋人名。" };
+
+      for (let i = 0; i < round.tables.length; i += 1) {
+        const person = round.tables[i].find(name => name.toLowerCase().includes(query));
+        if (person) return { tableId: i + 1, label: `${person} 在 Table ${i + 1}` };
+      }
+
+      return { tableId: null, label: "找不到符合的人名或桌號。" };
+    }
+
+    function renderVenueMap() {
+      const names = parseNames();
+      const tableCount = Math.max(1, Math.min(Number(els.tableCount.value) || 1, names.length || 1));
+      syncVenueTables(tableCount);
+      const found = findTableFromQuery();
+      els.floorPlan.style.setProperty("--floor-height", `${state.mapHeight}px`);
+      els.mapSize.value = state.mapHeight;
+      els.mapZoom.value = Math.round(state.mapZoom * 100);
+
+      const tableMarkup = state.venueTables.map(table => `
+        <button
+          type="button"
+          class="map-table ${table.shape} ${table.id === state.selectedTable ? "selected" : ""} ${table.id === found.tableId ? "found" : ""}"
+          data-table-id="${table.id}"
+          style="left: ${table.x}%; top: ${table.y}%; transform: ${tableTransform(table)};"
+          aria-label="Table ${table.id}"
+        >
+          <div class="map-table-content">
+            <strong>T${table.id}</strong>
+            ${renderMapNames(table)}
+            <span>${getTableMemberCount(table.id) || "未排"} 位</span>
+          </div>
+        </button>
+      `).join("");
+
+      els.floorPlan.innerHTML = `${tableMarkup}<div id="finderStatus" class="floor-label">${escapeHtml(found.label)}</div>`;
+      els.editMapBtn.classList.toggle("active", state.mapEditing);
+      els.editMapBtn.classList.toggle("attention", !state.mapEditing);
+      els.editMapBtn.textContent = state.mapEditing ? "完成編輯" : "編輯位置";
+      els.floorPlan.classList.toggle("editing", state.mapEditing);
+    }
+
+    function renderMapNames(table) {
+      const members = getTableMembers(table.id);
+      if (!members.length) return "";
+      const fontSize = getMapNameFontSize(members, table.shape);
+      return `
+        <div class="map-names" style="font-size: ${fontSize}px;">
+          ${members.map(name => `<div class="map-name" title="${escapeHtml(name)}">${escapeHtml(name)}</div>`).join("")}
+        </div>
+      `;
+    }
+
+    function floorPointToPercent(event) {
+      const rect = els.floorPlan.getBoundingClientRect();
+      return {
+        x: Math.max(6, Math.min(94, ((event.clientX - rect.left) / rect.width) * 100)),
+        y: Math.max(8, Math.min(92, ((event.clientY - rect.top) / rect.height) * 100))
+      };
+    }
+
+    function handleMapPointerDown(event) {
+      const target = event.target.closest(".map-table");
+      if (!target) return;
+
+      const id = Number(target.dataset.tableId);
+      state.selectedTable = id;
+
+      if (!state.mapEditing) {
+        renderVenueMap();
+        return;
+      }
+
+      els.floorPlan.querySelectorAll(".map-table").forEach(item => item.classList.remove("selected"));
+      target.classList.add("selected");
+
+      const table = selectedVenueTable();
+      const point = floorPointToPercent(event);
+      state.drag = {
+        id,
+        offsetX: point.x - table.x,
+        offsetY: point.y - table.y
+      };
+      target.classList.add("dragging");
+      target.setPointerCapture(event.pointerId);
+    }
+
+    function handleMapPointerMove(event) {
+      if (!state.drag) return;
+      const table = state.venueTables.find(item => item.id === state.drag.id);
+      if (!table) return;
+      const point = floorPointToPercent(event);
+      table.x = Math.max(6, Math.min(94, point.x - state.drag.offsetX));
+      table.y = Math.max(8, Math.min(92, point.y - state.drag.offsetY));
+      const target = els.floorPlan.querySelector(`[data-table-id="${table.id}"]`);
+      if (target) {
+        target.style.left = `${table.x}%`;
+        target.style.top = `${table.y}%`;
+        target.style.transform = tableTransform(table);
+      }
+    }
+
+    function handleMapPointerUp() {
+      state.drag = null;
+      els.floorPlan.querySelectorAll(".dragging").forEach(item => item.classList.remove("dragging"));
+    }
+
+    function scoreCandidate(person, tableMembers, tableIndex, roundIndex) {
+      const tableHistory = state.personTables.get(person) || [];
+      const sameTableCount = tableHistory.filter(table => table === tableIndex + 1).length;
+      let repeatedPairs = 0;
+      let pairPenalty = 0;
+
+      for (const other of tableMembers) {
+        const count = state.pairCounts.get(pairKey(person, other)) || 0;
+        if (count > 0) repeatedPairs += 1;
+        pairPenalty += count * 100;
+      }
+
+      const tablePenalty = sameTableCount * 4;
+      const lateRoundNoise = roundIndex > 1 ? Math.random() * 2 : Math.random() * 0.2;
+      return { score: pairPenalty + tablePenalty + lateRoundNoise, repeatedPairs };
+    }
+
+    function buildArrangement(names, tableCount) {
+      const capacities = getCapacities(names.length, tableCount);
+      const tables = capacities.map(() => []);
+      const people = shuffle(names);
+      const roundIndex = state.rounds.length + 1;
+
+      for (const person of people) {
+        const candidates = tables
+          .map((members, index) => ({ members, index }))
+          .filter(table => table.members.length < capacities[table.index])
+          .map(table => ({
+            index: table.index,
+            ...scoreCandidate(person, table.members, table.index, roundIndex)
+          }))
+          .sort((a, b) => a.score - b.score || a.repeatedPairs - b.repeatedPairs);
+
+        tables[candidates[0].index].push(person);
+      }
+
+      return { tables, metrics: evaluateArrangement(tables) };
+    }
+
+    function evaluateArrangement(tables) {
+      let repeatedPairs = 0;
+      let weightedRepeatScore = 0;
+
+      for (const table of tables) {
+        for (let i = 0; i < table.length; i += 1) {
+          for (let j = i + 1; j < table.length; j += 1) {
+            const count = state.pairCounts.get(pairKey(table[i], table[j])) || 0;
+            if (count > 0) repeatedPairs += 1;
+            weightedRepeatScore += count;
+          }
+        }
+      }
+
+      return { repeatedPairs, weightedRepeatScore };
+    }
+
+    function haveMet(a, b) {
+      return (state.pairCounts.get(pairKey(a, b)) || 0) > 0;
+    }
+
+    function getPerfectScheduleRound(names, tableCount) {
+      if (names.length !== 16 || tableCount !== 4 || state.rounds.length >= 5) return null;
+
+      const add = (a, b) => a ^ b;
+      const multiply = (a, b) => {
+        const table = [
+          [0, 0, 0, 0],
+          [0, 1, 2, 3],
+          [0, 2, 3, 1],
+          [0, 3, 1, 2]
+        ];
+        return table[a][b];
+      };
+      const point = (x, y) => names[x * 4 + y];
+      const roundIndex = state.rounds.length;
+      let tables;
+
+      if (roundIndex === 0) {
+        tables = [0, 1, 2, 3].map(x => [0, 1, 2, 3].map(y => point(x, y)));
+      } else {
+        const slope = roundIndex - 1;
+        tables = [0, 1, 2, 3].map(intercept =>
+          [0, 1, 2, 3].map(x => point(x, add(multiply(slope, x), intercept)))
+        );
+      }
+
+      const metrics = evaluateArrangement(tables);
+      if (metrics.repeatedPairs > 0) return null;
+
+      return {
+        found: true,
+        tables,
+        metrics,
+        search: {
+          mode: "perfect-16x4",
+          nodes: 0,
+          elapsedMs: 0
+        }
+      };
+    }
+
+    function canJoinGroup(person, group) {
+      return group.every(other => !haveMet(person, other));
+    }
+
+    function findZeroRepeatRound(names, tableCount) {
+      const capacities = getCapacities(names.length, tableCount);
+      const tables = capacities.map(() => []);
+      const remaining = new Set(names);
+      const maxNodes = names.length <= 24 ? 500000 : names.length <= 36 ? 120000 : 30000;
+      const startedAt = performance.now();
+      let nodes = 0;
+      let hitLimit = false;
+
+      function pickAnchor() {
+        return [...remaining]
+          .map(person => ({
+            person,
+            options: [...remaining].filter(other => other !== person && !haveMet(person, other)).length
+          }))
+          .sort((a, b) => a.options - b.options || a.person.localeCompare(b.person, "zh-Hant"))[0]?.person;
+      }
+
+      function buildPartnerGroups(candidates, size, prefix, groups) {
+        if (groups.length > 2500) return;
+        if (prefix.length === size) {
+          groups.push(prefix);
+          return;
+        }
+
+        for (let i = 0; i < candidates.length; i += 1) {
+          const person = candidates[i];
+          if (!canJoinGroup(person, prefix)) continue;
+          buildPartnerGroups(candidates.slice(i + 1), size, [...prefix, person], groups);
+        }
+      }
+
+      function search(tableIndex) {
+        nodes += 1;
+        if (nodes > maxNodes) {
+          hitLimit = true;
+          return false;
+        }
+
+        while (tableIndex < capacities.length && tables[tableIndex].length === capacities[tableIndex]) {
+          tableIndex += 1;
+        }
+
+        if (tableIndex >= capacities.length) return remaining.size === 0;
+
+        const anchor = pickAnchor();
+        if (!anchor) return false;
+
+        const neededPartners = capacities[tableIndex] - 1;
+        const candidates = [...remaining]
+          .filter(person => person !== anchor && !haveMet(anchor, person))
+          .sort((a, b) => {
+            const aHistory = (state.personTables.get(a) || []).filter(table => table === tableIndex + 1).length;
+            const bHistory = (state.personTables.get(b) || []).filter(table => table === tableIndex + 1).length;
+            return aHistory - bHistory || a.localeCompare(b, "zh-Hant");
+          });
+
+        if (candidates.length < neededPartners) return false;
+
+        const partnerGroups = [];
+        buildPartnerGroups(candidates, neededPartners, [], partnerGroups);
+
+        for (const partners of shuffle(partnerGroups)) {
+          const group = [anchor, ...partners];
+          tables[tableIndex] = group;
+          for (const person of group) remaining.delete(person);
+
+          if (search(tableIndex + 1)) {
+            return true;
+          }
+
+          for (const person of group) remaining.add(person);
+          tables[tableIndex] = [];
+        }
+
+        return false;
+      }
+
+      const found = search(0);
+      if (!found) {
+        return {
+          found: false,
+          hitLimit,
+          nodes,
+          elapsedMs: Math.round(performance.now() - startedAt)
+        };
+      }
+
+      return {
+        found: true,
+        tables,
+        metrics: evaluateArrangement(tables),
+        search: {
+          mode: "exact",
+          nodes,
+          elapsedMs: Math.round(performance.now() - startedAt)
+        }
+      };
+    }
+
+    function generateBestRoundBySampling(names, tableCount, attempts) {
+      let best = null;
+      for (let i = 0; i < attempts; i += 1) {
+        const arrangement = buildArrangement(names, tableCount);
+        if (
+          !best ||
+          arrangement.metrics.repeatedPairs < best.metrics.repeatedPairs ||
+          (
+            arrangement.metrics.repeatedPairs === best.metrics.repeatedPairs &&
+            arrangement.metrics.weightedRepeatScore < best.metrics.weightedRepeatScore
+          )
+        ) {
+          best = arrangement;
+        }
+      }
+      return best;
+    }
+
+    function generateBestRound(names, tableCount) {
+      const perfectSchedule = getPerfectScheduleRound(names, tableCount);
+      if (perfectSchedule) return perfectSchedule;
+
+      const zeroRepeat = findZeroRepeatRound(names, tableCount);
+      if (zeroRepeat.found) return zeroRepeat;
+
+      const adaptiveAttempts = Math.min(
+        25000,
+        Math.max(1500, names.length * names.length * tableCount * (state.rounds.length + 1))
+      );
+      const sampled = generateBestRoundBySampling(names, tableCount, adaptiveAttempts);
+      return {
+        ...sampled,
+        search: {
+          mode: sampled.metrics.repeatedPairs === 0 ? "adaptive-zero" : "adaptive-best",
+          attempts: adaptiveAttempts,
+          exactNodes: zeroRepeat.nodes,
+          exactHitLimit: zeroRepeat.hitLimit
+        }
+      };
+    }
+
+    function rebuildHistory() {
+      state.pairCounts.clear();
+      state.personTables.clear();
+
+      for (const round of state.rounds) {
+        round.tables.forEach((table, tableIndex) => {
+          for (const person of table) {
+            if (!state.personTables.has(person)) state.personTables.set(person, []);
+            state.personTables.get(person).push(tableIndex + 1);
+          }
+
+          for (let i = 0; i < table.length; i += 1) {
+            for (let j = i + 1; j < table.length; j += 1) {
+              const key = pairKey(table[i], table[j]);
+              state.pairCounts.set(key, (state.pairCounts.get(key) || 0) + 1);
+            }
+          }
+        });
+      }
+    }
+
+    function ensureFreshRoster(names) {
+      const namesKey = names.join("|||");
+      if (state.activeNamesKey && state.activeNamesKey !== namesKey && state.rounds.length) {
+        resetState();
+      }
+      state.activeNamesKey = namesKey;
+    }
+
+    function showNotice(message) {
+      els.notice.textContent = message;
+      els.notice.classList.toggle("show", Boolean(message));
+    }
+
+    function showExportText(text) {
+      els.exportBox.value = text;
+      els.exportBox.style.display = "block";
+      els.exportBox.focus();
+      els.exportBox.select();
+    }
+
+    function nextRound() {
+      const names = parseNames();
+      const tableCount = Math.max(1, Math.min(Number(els.tableCount.value) || 1, names.length || 1));
+
+      if (names.length < 2) {
+        showNotice("請至少輸入 2 位成員。");
+        render();
+        return;
+      }
+
+      ensureFreshRoster(names);
+      els.tableCount.value = tableCount;
+      els.searchMode.textContent = "搜尋中...";
+
+      const best = generateBestRound(names, tableCount);
+      state.rounds.push({
+        number: state.rounds.length + 1,
+        tables: best.tables,
+        metrics: best.metrics,
+        search: best.search
+      });
+      rebuildHistory();
+
+      const maxUniqueRounds = estimateMaxUniqueRounds(names.length, tableCount);
+      if (best.search?.mode === "perfect-16x4") {
+        showNotice("本輪套用 16 人 4 桌的完美 5 輪設計，保證目前沒有重複同桌。");
+      } else if (best.metrics.repeatedPairs === 0 && best.search?.mode === "exact") {
+        showNotice(`本輪找到 0 重複組合，精確搜尋檢查了 ${best.search.nodes} 個節點。`);
+      } else if (best.metrics.repeatedPairs === 0) {
+        showNotice(`本輪找到 0 重複組合，自適應搜尋嘗試了 ${best.search?.attempts || 0} 次。`);
+      } else if (state.rounds.length > maxUniqueRounds) {
+        showNotice(`已超過約 ${maxUniqueRounds} 輪的低重複區間，後續出現重複同桌是正常的。`);
+      } else {
+        showNotice(`精確搜尋未找到 0 重複組合，已改用自適應最佳化；本輪仍有 ${best.metrics.repeatedPairs} 組舊同桌再次碰面。`);
+      }
+
+      render();
+    }
+
+    function estimateMaxUniqueRounds(peopleCount, tableCount) {
+      const capacities = getCapacities(peopleCount, tableCount);
+      const largestTable = Math.max(...capacities);
+      return Math.max(1, Math.floor((peopleCount - 1) / Math.max(1, largestTable - 1)));
+    }
+
+    function resetState() {
+      state.rounds = [];
+      state.pairCounts.clear();
+      state.personTables.clear();
+      state.activeNamesKey = "";
+      els.exportBox.style.display = "none";
+      els.exportBox.value = "";
+      showNotice("");
+    }
+
+    function undoRound() {
+      state.rounds.pop();
+      rebuildHistory();
+      render();
+    }
+
+    function getRoundPairRepeatCount(table, person) {
+      let repeats = 0;
+      for (const other of table) {
+        if (other !== person && (state.pairCounts.get(pairKey(person, other)) || 0) > 1) {
+          repeats += 1;
+        }
+      }
+      return repeats;
+    }
+
+    function renderTables(round) {
+      if (!round) {
+        els.tables.innerHTML = `
+          <div class="empty">
+            <div>
+              <h2>準備開始</h2>
+              <p class="subtle">你可以先修改左側名單與桌數，再按 Next。</p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      els.tables.innerHTML = round.tables.map((table, tableIndex) => `
+        <article class="table-card">
+          <div>
+            <h2>Table ${tableIndex + 1}</h2>
+            <p class="subtle">${table.length} 位成員</p>
+          </div>
+          <div class="table-top">
+            <div class="table-name">T${tableIndex + 1}</div>
+          </div>
+          <div class="seats">
+            ${table.map(person => {
+              const repeats = getRoundPairRepeatCount(table, person);
+              return `
+                <div class="seat ${repeats ? "repeat" : ""}">
+                  <strong>${escapeHtml(person)}</strong>
+                  <span>${repeats ? `本輪有 ${repeats} 位舊同桌` : "新鮮配對"}</span>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function renderPersonHistory(names) {
+      if (!names.length) {
+        els.personHistory.innerHTML = `<p class="subtle">尚無人名。</p>`;
+        return;
+      }
+
+      els.personHistory.innerHTML = names.map(name => {
+        const tables = state.personTables.get(name) || [];
+        const text = tables.length ? tables.map((table, index) => `R${index + 1}:T${table}`).join(" → ") : "尚未安排";
+        return `
+          <div class="record">
+            <strong>${escapeHtml(name)}</strong>
+            <small>${escapeHtml(text)}</small>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderRepeatPairs() {
+      const repeats = [...state.pairCounts.entries()]
+        .filter(([, count]) => count > 1)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "zh-Hant"));
+
+      if (!repeats.length) {
+        els.repeatPairs.innerHTML = `<p class="subtle">目前沒有重複同桌配對。</p>`;
+        return;
+      }
+
+      els.repeatPairs.innerHTML = repeats.map(([key, count]) => {
+        const [a, b] = key.split("|||");
+        return `
+          <div class="pair">
+            <span>${escapeHtml(a)} × ${escapeHtml(b)}</span>
+            <em>${count} 次</em>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderStats(names, round) {
+      const totalRepeatedMeetings = [...state.pairCounts.values()]
+        .reduce((sum, count) => sum + Math.max(0, count - 1), 0);
+      const searchText = getSearchText(round);
+
+      els.peopleStat.textContent = names.length;
+      els.tablesStat.textContent = Math.max(1, Number(els.tableCount.value) || 1);
+      els.roundRepeatStat.textContent = round ? round.metrics.repeatedPairs : 0;
+      els.totalRepeatStat.textContent = totalRepeatedMeetings;
+      els.searchMode.textContent = searchText.modeBox;
+      els.roundTitle.textContent = round ? `第 ${round.number} 輪` : "尚未開始";
+      els.roundNote.textContent = round
+        ? `${searchText.note} 本輪共有 ${round.metrics.repeatedPairs} 組舊同桌再次碰面。`
+        : "按下 Next 產生第一輪座位。";
+    }
+
+    function getSearchText(round) {
+      if (!round) {
+        return {
+          modeBox: "自適應找 0 重複",
+          note: ""
+        };
+      }
+
+      if (round.search?.mode === "perfect-16x4") {
+        return {
+          modeBox: "16 人 4 桌完美排程",
+          note: "已套用 16 人 4 桌的 5 輪 0 重複設計。"
+        };
+      }
+
+      if (round.search?.mode === "exact") {
+        return {
+          modeBox: `精確 0 重複 (${round.search.nodes} 節點)`,
+          note: "已用精確搜尋找到 0 重複組合。"
+        };
+      }
+
+      if (round.search?.mode === "adaptive-zero") {
+        return {
+          modeBox: `自適應 0 重複 (${round.search.attempts} 次)`,
+          note: "已用自適應搜尋找到 0 重複組合。"
+        };
+      }
+
+      return {
+        modeBox: `自適應最佳解 (${round.search?.attempts || 0} 次)`,
+        note: "這輪已找目前最佳組合。"
+      };
+    }
+
+    function render() {
+      const names = parseNames();
+      const round = state.rounds.at(-1);
+      renderStats(names, round);
+      renderVenueMap();
+      renderTables(round);
+      renderPersonHistory(names);
+      renderRepeatPairs();
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function buildRecordText() {
+      const lines = [];
+      for (const round of state.rounds) {
+        lines.push(`第 ${round.number} 輪`);
+        round.tables.forEach((table, index) => {
+          lines.push(`Table ${index + 1}: ${table.join(", ")}`);
+        });
+        lines.push("");
+      }
+
+      const repeats = [...state.pairCounts.entries()]
+        .filter(([, count]) => count > 1)
+        .sort((a, b) => b[1] - a[1]);
+      lines.push("重複同桌配對");
+      if (!repeats.length) lines.push("無");
+      for (const [key, count] of repeats) {
+        lines.push(`${key.replace("|||", " × ")}: ${count} 次`);
+      }
+      return lines.join("\n");
+    }
+
+    async function copyRecords() {
+      const text = buildRecordText();
+      try {
+        if (!navigator.clipboard) throw new Error("Clipboard unavailable");
+        await Promise.race([
+          navigator.clipboard.writeText(text),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Clipboard timeout")), 700))
+        ]);
+        els.exportBox.style.display = "none";
+        showNotice("已複製目前輪次與重複配對紀錄。");
+      } catch {
+        showExportText(text);
+        showNotice("瀏覽器不允許自動複製；已把紀錄放在下方文字框，可手動複製。");
+      }
+    }
+
+    els.nextBtn.addEventListener("click", nextRound);
+    els.undoBtn.addEventListener("click", undoRound);
+    els.resetBtn.addEventListener("click", () => {
+      resetState();
+      render();
+    });
+    els.copyBtn.addEventListener("click", copyRecords);
+    els.editMapBtn.addEventListener("click", () => {
+      state.mapEditing = !state.mapEditing;
+      renderVenueMap();
+    });
+    els.shapeBtn.addEventListener("click", toggleSelectedShape);
+    els.rotateLeftBtn.addEventListener("click", () => rotateSelectedTable(-45));
+    els.rotateRightBtn.addEventListener("click", () => rotateSelectedTable(45));
+    els.resetMapBtn.addEventListener("click", resetVenueLayout);
+    els.floorPlan.addEventListener("pointerdown", handleMapPointerDown);
+    els.floorPlan.addEventListener("pointermove", handleMapPointerMove);
+    els.floorPlan.addEventListener("pointerup", handleMapPointerUp);
+    els.floorPlan.addEventListener("pointercancel", handleMapPointerUp);
+    els.findPerson.addEventListener("input", renderVenueMap);
+    els.mapSize.addEventListener("input", () => {
+      state.mapHeight = Number(els.mapSize.value);
+      els.floorPlan.style.setProperty("--floor-height", `${state.mapHeight}px`);
+    });
+    els.mapZoom.addEventListener("input", () => {
+      state.mapZoom = Number(els.mapZoom.value) / 100;
+      for (const table of state.venueTables) {
+        const target = els.floorPlan.querySelector(`[data-table-id="${table.id}"]`);
+        if (target) target.style.transform = tableTransform(table);
+      }
+    });
+    els.names.addEventListener("input", render);
+    els.tableCount.addEventListener("input", () => {
+      syncVenueTables(Math.max(1, Math.min(Number(els.tableCount.value) || 1, parseNames().length || 1)));
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
