@@ -435,14 +435,11 @@
       height: 88px;
       left: 0;
       top: 0;
-      display: grid;
-      place-items: center;
-      border: 2px solid #958c7b;
-      background: #ece7da;
+      border: 0;
+      background: transparent;
       color: #28251f;
-      box-shadow: 0 8px 18px rgba(40, 37, 28, 0.13);
       cursor: pointer;
-      padding: 8px;
+      padding: 0;
       transform-origin: center;
     }
 
@@ -464,12 +461,30 @@
       border-radius: 12px;
     }
 
-    .map-table.selected {
+    .map-table-surface {
+      position: absolute;
+      inset: 0;
+      border: 2px solid #958c7b;
+      border-radius: 12px;
+      background: #ece7da;
+      box-shadow: 0 8px 18px rgba(40, 37, 28, 0.13);
+      transform-origin: center;
+    }
+
+    .map-table.round .map-table-surface {
+      border-radius: 999px;
+    }
+
+    .map-table.square .map-table-surface {
+      border-radius: 10px;
+    }
+
+    .map-table.selected .map-table-surface {
       border-color: var(--accent);
       box-shadow: 0 0 0 4px rgba(25, 122, 122, 0.18), 0 8px 18px rgba(40, 37, 28, 0.13);
     }
 
-    .map-table.found {
+    .map-table.found .map-table-surface {
       border-color: #c28d1d;
       background: #fff0ba;
       box-shadow: 0 0 0 5px rgba(194, 141, 29, 0.22), 0 8px 18px rgba(40, 37, 28, 0.13);
@@ -494,12 +509,28 @@
     }
 
     .map-table-content {
-      width: 100%;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(150px, 130%);
       min-width: 0;
       display: grid;
       gap: 4px;
       justify-items: center;
+      padding: 7px 9px;
+      border-radius: 8px;
+      background: rgba(255, 253, 248, 0.78);
+      box-shadow: 0 3px 10px rgba(40, 37, 28, 0.08);
+      pointer-events: none;
       transform-origin: center;
+    }
+
+    .map-table.round .map-table-content {
+      width: min(138px, 118%);
+    }
+
+    .map-table.long .map-table-content {
+      width: min(158px, 136%);
     }
 
     .map-names {
@@ -1126,11 +1157,15 @@ Peter</textarea>
     }
 
     function tableTransform(table) {
-      return `translate(-50%, -50%) rotate(${table.angle}deg) scale(${state.mapZoom})`;
+      return `translate(-50%, -50%) scale(${state.mapZoom})`;
     }
 
-    function tableContentTransform(table) {
-      return `rotate(${-table.angle}deg)`;
+    function tableSurfaceTransform(table) {
+      return `rotate(${table.angle}deg)`;
+    }
+
+    function tableContentTransform() {
+      return "translate(-50%, -50%)";
     }
 
     function getMapNameFontSize(members, shape) {
@@ -1182,7 +1217,8 @@ Peter</textarea>
           style="left: ${table.x}%; top: ${table.y}%; transform: ${tableTransform(table)};"
           aria-label="Table ${table.id}"
         >
-          <div class="map-table-content" style="transform: ${tableContentTransform(table)};">
+          <div class="map-table-surface" style="transform: ${tableSurfaceTransform(table)};"></div>
+          <div class="map-table-content" style="transform: ${tableContentTransform()};">
             <strong>T${table.id}</strong>
             ${renderMapNames(table)}
             <span>${getTableMemberCount(table.id) || "未排"} 位</span>
