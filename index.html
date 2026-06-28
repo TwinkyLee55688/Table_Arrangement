@@ -492,6 +492,7 @@
       display: grid;
       gap: 4px;
       justify-items: center;
+      transform-origin: center;
     }
 
     .map-names {
@@ -1119,6 +1120,10 @@ Peter</textarea>
       return `translate(-50%, -50%) rotate(${table.angle}deg) scale(${state.mapZoom})`;
     }
 
+    function tableContentTransform(table) {
+      return `rotate(${-table.angle}deg)`;
+    }
+
     function getMapNameFontSize(members, shape) {
       if (!members.length) return 10;
       const longest = Math.max(...members.map(name => Array.from(name).length));
@@ -1168,7 +1173,7 @@ Peter</textarea>
           style="left: ${table.x}%; top: ${table.y}%; transform: ${tableTransform(table)};"
           aria-label="Table ${table.id}"
         >
-          <div class="map-table-content">
+          <div class="map-table-content" style="transform: ${tableContentTransform(table)};">
             <strong>T${table.id}</strong>
             ${renderMapNames(table)}
             <span>${getTableMemberCount(table.id) || "未排"} 位</span>
