@@ -453,6 +453,13 @@
       padding: 14px;
     }
 
+    .map-table.square {
+      width: 126px;
+      height: 126px;
+      border-radius: 10px;
+      padding: 12px;
+    }
+
     .map-table.long {
       border-radius: 12px;
     }
@@ -1066,7 +1073,7 @@ Peter</textarea>
         x: 18 + ((col + 0.5) / columns) * 70,
         y: 16 + ((row + 0.5) / rows) * 62,
         angle: 0,
-        shape: index % 2 === 0 ? "long" : "round"
+        shape: "square"
       };
     }
 
@@ -1102,7 +1109,9 @@ Peter</textarea>
     function toggleSelectedShape() {
       const table = selectedVenueTable();
       if (!table) return;
-      table.shape = table.shape === "long" ? "round" : "long";
+      const shapes = ["square", "long", "round"];
+      const nextIndex = (shapes.indexOf(table.shape) + 1) % shapes.length;
+      table.shape = shapes[nextIndex];
       renderVenueMap();
     }
 
