@@ -40,8 +40,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 14px;
-      padding: 10px 18px;
+      gap: 20px;
+      padding: 8px 18px;
       border-bottom: 1px solid #d6cfbf;
       background: #fff8dc;
       box-shadow: 0 8px 24px rgba(40, 37, 28, 0.08);
@@ -61,7 +61,7 @@
     .countdown-main {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 16px;
       min-width: 0;
     }
 
@@ -74,7 +74,7 @@
 
     .countdown-time {
       font-variant-numeric: tabular-nums;
-      font-size: clamp(30px, 4vw, 48px);
+      font-size: clamp(38px, 4.6vw, 60px);
       line-height: 1;
       font-weight: 950;
       letter-spacing: 0;
@@ -84,36 +84,63 @@
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      gap: 8px;
+      gap: 10px;
       flex-wrap: wrap;
     }
 
-    .countdown-controls label {
-      display: inline-flex;
+    .timer-stepper {
+      display: grid;
+      grid-template-columns: 42px 86px 42px;
       align-items: center;
       gap: 6px;
-      margin: 0;
-      font-size: 12px;
-      font-weight: 800;
-      color: inherit;
-      white-space: nowrap;
     }
 
-    .countdown-controls input {
-      width: 70px;
-      min-height: 34px;
+    .timer-stepper input {
+      width: 100%;
+      min-height: 42px;
       border: 1px solid var(--line);
       border-radius: 8px;
-      padding: 6px 8px;
+      padding: 5px 8px;
       background: #fffdf8;
       color: var(--ink);
-      font-weight: 800;
+      font-size: 19px;
+      font-weight: 950;
+      text-align: center;
+    }
+
+    .timer-stepper span {
+      display: block;
+      margin-top: 2px;
+      color: inherit;
+      font-size: 11px;
+      font-weight: 900;
+      text-align: center;
+      opacity: 0.78;
     }
 
     .countdown-controls button {
-      min-height: 34px;
-      padding: 6px 11px;
+      min-height: 42px;
+      padding: 8px 14px;
       font-size: 13px;
+    }
+
+    .timer-step-btn {
+      min-width: 42px;
+      padding: 0;
+      font-size: 22px;
+      line-height: 1;
+      background: #ece6d9;
+      color: var(--ink);
+    }
+
+    #timerStartBtn {
+      min-width: 96px;
+      font-size: 17px;
+      background: var(--accent);
+    }
+
+    #timerResetBtn {
+      min-width: 70px;
     }
 
     .app {
@@ -833,9 +860,14 @@
       <div id="countdownTime" class="countdown-time">10:00</div>
     </div>
     <div class="countdown-controls">
-      <label for="timerMinutes">分鐘
-        <input id="timerMinutes" type="number" min="1" max="180" value="10">
-      </label>
+      <div class="timer-stepper" aria-label="調整倒計時分鐘">
+        <button id="timerMinusBtn" class="timer-step-btn" type="button" aria-label="減少一分鐘">−</button>
+        <label for="timerMinutes">
+          <input id="timerMinutes" type="number" min="1" max="180" value="10">
+          <span>分鐘</span>
+        </label>
+        <button id="timerPlusBtn" class="timer-step-btn" type="button" aria-label="增加一分鐘">+</button>
+      </div>
       <button id="timerStartBtn">開始</button>
       <button id="timerResetBtn" class="ghost">重置</button>
     </div>
@@ -959,6 +991,8 @@ Peter</textarea>
       countdownBar: document.querySelector("#countdownBar"),
       countdownTime: document.querySelector("#countdownTime"),
       timerMinutes: document.querySelector("#timerMinutes"),
+      timerMinusBtn: document.querySelector("#timerMinusBtn"),
+      timerPlusBtn: document.querySelector("#timerPlusBtn"),
       timerStartBtn: document.querySelector("#timerStartBtn"),
       timerResetBtn: document.querySelector("#timerResetBtn"),
       names: document.querySelector("#names"),
@@ -1035,6 +1069,17 @@ Peter</textarea>
       state.timerSeconds = minutes * 60;
       state.timerEndsAt = null;
       renderTimer();
+    }
+
+    function changeTimerMinutes(delta) {
+      const current = Math.max(1, Math.min(Number(els.timerMinutes.value) || 10, 180));
+      els.timerMinutes.value = Math.max(1, Math.min(current + delta, 180));
+      const shouldResume = state.timerRunning;
+      state.timerRunning = false;
+      clearInterval(state.timerId);
+      state.timerId = null;
+      setTimerFromInput();
+      if (shouldResume) toggleTimer();
     }
 
     function tickTimer() {
@@ -1847,6 +1892,8 @@ Peter</textarea>
     });
     els.timerStartBtn.addEventListener("click", toggleTimer);
     els.timerResetBtn.addEventListener("click", resetTimer);
+    els.timerMinusBtn.addEventListener("click", () => changeTimerMinutes(-1));
+    els.timerPlusBtn.addEventListener("click", () => changeTimerMinutes(1));
     els.timerMinutes.addEventListener("input", resetTimer);
     els.timerMinutes.addEventListener("change", resetTimer);
     els.copyBtn.addEventListener("click", copyRecords);
