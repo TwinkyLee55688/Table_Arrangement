@@ -1,0 +1,1608 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Table Arrangement Fusion</title>
+  <style>
+    :root {
+      --ink: #10291d;
+      --muted: #677061;
+      --line: #ded6c2;
+      --paper: #fffdf7;
+      --wash: #f3f1dd;
+      --accent: #087f53;
+      --accent-border: rgba(8, 127, 83, 0.14);
+      --accent-soft: rgba(8, 127, 83, 0.1);
+      --danger: #c94133;
+      --soft-danger: rgba(201, 65, 51, 0.14);
+      --page-bg:
+        radial-gradient(circle at 18% 15%, rgba(201, 238, 169, 0.58), transparent 32%),
+        linear-gradient(110deg, #eff7db 0%, #fbf7e7 45%, #f4ead8 100%);
+      --panel-bg: rgba(255, 253, 247, 0.72);
+      --bar-bg: rgba(255, 253, 247, 0.82);
+      --field-bg: rgba(255, 254, 249, 0.86);
+      --table-1: #058b58;
+      --table-2: #ca5a16;
+      --table-3: #286d79;
+      --table-4: #7b5d8d;
+      --shadow: 0 30px 90px rgba(32, 38, 28, 0.1);
+    }
+
+    * { box-sizing: border-box; }
+
+    body[data-theme="red"] {
+      --ink: #311416;
+      --muted: #796262;
+      --line: #ead0ca;
+      --paper: #fff9f7;
+      --wash: #f8e7e3;
+      --accent: #c92f32;
+      --accent-border: rgba(201, 47, 50, 0.18);
+      --accent-soft: rgba(201, 47, 50, 0.11);
+      --danger: #8f1f28;
+      --page-bg:
+        radial-gradient(circle at 18% 16%, rgba(255, 143, 132, 0.34), transparent 32%),
+        linear-gradient(115deg, #fff1ed 0%, #fff8f0 44%, #f3d9d7 100%);
+      --panel-bg: rgba(255, 250, 247, 0.78);
+      --bar-bg: rgba(255, 249, 247, 0.86);
+      --field-bg: rgba(255, 252, 250, 0.9);
+      --table-1: #cf3138;
+      --table-2: #ef7d22;
+      --table-3: #8b2f64;
+      --table-4: #a8472d;
+    }
+
+    body[data-theme="blue"] {
+      --ink: #102438;
+      --muted: #5d6e7d;
+      --line: #cddce8;
+      --paper: #f8fcff;
+      --wash: #e7f1f8;
+      --accent: #1769aa;
+      --accent-border: rgba(23, 105, 170, 0.18);
+      --accent-soft: rgba(23, 105, 170, 0.11);
+      --danger: #d5453f;
+      --page-bg:
+        radial-gradient(circle at 18% 16%, rgba(124, 191, 232, 0.42), transparent 32%),
+        linear-gradient(115deg, #e9f6ff 0%, #f7fbff 46%, #dbe9f6 100%);
+      --panel-bg: rgba(249, 253, 255, 0.78);
+      --bar-bg: rgba(249, 253, 255, 0.86);
+      --field-bg: rgba(252, 254, 255, 0.9);
+      --table-1: #1769aa;
+      --table-2: #12a3a8;
+      --table-3: #3554b8;
+      --table-4: #6b6fc8;
+    }
+
+    body[data-theme="sousou"] {
+      --ink: #1e2320;
+      --muted: #6d6a60;
+      --line: #d8d4c6;
+      --paper: #fffdf5;
+      --wash: #f7f1de;
+      --accent: #d21f32;
+      --accent-border: rgba(210, 31, 50, 0.18);
+      --accent-soft: rgba(210, 31, 50, 0.1);
+      --danger: #0d6f8f;
+      --page-bg:
+        radial-gradient(circle at 16px 16px, rgba(210, 31, 50, 0.18) 0 8px, transparent 9px),
+        radial-gradient(circle at 56px 52px, rgba(13, 111, 143, 0.16) 0 10px, transparent 11px),
+        radial-gradient(circle at 88px 20px, rgba(232, 172, 42, 0.18) 0 7px, transparent 8px),
+        linear-gradient(115deg, #fffaf0 0%, #f7f1df 52%, #edf4ef 100%);
+      --panel-bg: rgba(255, 253, 245, 0.86);
+      --bar-bg: rgba(255, 253, 245, 0.9);
+      --field-bg: rgba(255, 253, 248, 0.93);
+      --table-1: #d21f32;
+      --table-2: #0d6f8f;
+      --table-3: #e8a81f;
+      --table-4: #111f4d;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--page-bg);
+      background-size: auto, auto, auto, auto;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, textarea, input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      min-height: 42px;
+      border-radius: 14px;
+      padding: 10px 16px;
+      color: #fff;
+      background: var(--accent);
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+
+    button:hover { filter: brightness(0.97); }
+    button:active { transform: translateY(1px); }
+
+    .ghost {
+      color: var(--ink);
+      background: var(--panel-bg);
+      border: 1px solid var(--accent-border);
+    }
+
+    .danger { background: var(--danger); }
+
+    .app {
+      min-height: 100vh;
+      padding: 28px 42px 96px;
+    }
+
+    .countdown-bar {
+      position: sticky;
+      top: 0;
+      z-index: 15;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 22px;
+      padding: 16px 42px;
+      background: var(--bar-bg);
+      box-shadow: 0 16px 44px rgba(33, 34, 25, 0.08);
+      backdrop-filter: blur(14px);
+    }
+
+    .countdown-main {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .countdown-badge {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--accent);
+      font-weight: 950;
+    }
+
+    .countdown-label {
+      color: var(--accent);
+      font-weight: 950;
+    }
+
+    .countdown-time {
+      color: #09291e;
+      font-size: clamp(54px, 7vw, 88px);
+      line-height: 0.88;
+      font-weight: 1000;
+      letter-spacing: 0;
+    }
+
+    .timer-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .timer-controls button {
+      min-width: 48px;
+      background: #ece5d6;
+      color: var(--ink);
+    }
+
+    .timer-controls .timer-primary {
+      min-width: 112px;
+      color: #fff;
+      background: var(--accent);
+      box-shadow: 0 16px 34px rgba(8, 127, 83, 0.24);
+    }
+
+    .timer-minutes {
+      display: grid;
+      justify-items: center;
+      gap: 2px;
+      min-width: 86px;
+    }
+
+    .timer-minutes input {
+      width: 86px;
+      min-height: 50px;
+      border: 1px solid #d9d0bd;
+      border-radius: 14px;
+      text-align: center;
+      color: var(--ink);
+      background: #fffdf7;
+      font-size: 19px;
+      font-weight: 950;
+    }
+
+    .timer-minutes span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .setup-mode .countdown-bar,
+    .setup-mode .stage,
+    .setup-mode .floating-action {
+      display: none;
+    }
+
+    .running-mode .setup-grid {
+      display: none;
+    }
+
+    .setup-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) minmax(360px, 460px);
+      gap: 46px;
+      align-items: center;
+      min-height: calc(100vh - 120px);
+    }
+
+    .setup-hero {
+      max-width: 720px;
+      padding-left: 6px;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 15px;
+      font-weight: 950;
+    }
+
+    .setup-hero h1 {
+      margin: 18px 0 26px;
+      color: #122319;
+      font-size: clamp(58px, 7vw, 108px);
+      line-height: 0.95;
+      letter-spacing: 0;
+    }
+
+    .setup-hero h1::after {
+      content: "。";
+      color: var(--accent);
+    }
+
+    .setup-hero p {
+      max-width: 560px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.9;
+      font-weight: 700;
+    }
+
+    .sidebar,
+    .venue,
+    .tracker {
+      border: 1px solid rgba(217, 211, 191, 0.75);
+      border-radius: 26px;
+      background: var(--panel-bg);
+      box-shadow: var(--shadow);
+    }
+
+    .sidebar {
+      padding: 24px;
+    }
+
+    .sidebar h1 {
+      margin: 0 0 12px;
+      color: #0d2218;
+      font-size: 32px;
+      line-height: 1;
+    }
+
+    .sidebar h1::after {
+      content: "。";
+      color: var(--accent);
+    }
+
+    .subtle {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .theme-switcher {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin: 16px 0 4px;
+    }
+
+    .theme-button {
+      min-height: 38px;
+      border: 2px solid transparent;
+      padding: 8px 9px;
+      color: var(--ink);
+      background: var(--field-bg);
+      font-size: 13px;
+      box-shadow: none;
+    }
+
+    .theme-button.active {
+      border-color: var(--accent);
+      color: #fff;
+      background: var(--accent);
+    }
+
+    .theme-button[data-theme-choice="sousou"] {
+      background:
+        radial-gradient(circle at 12px 12px, rgba(210, 31, 50, 0.24) 0 5px, transparent 6px),
+        radial-gradient(circle at 34px 24px, rgba(13, 111, 143, 0.18) 0 6px, transparent 7px),
+        var(--field-bg);
+    }
+
+    .theme-button[data-theme-choice="sousou"].active {
+      color: #fff;
+      background:
+        radial-gradient(circle at 12px 12px, rgba(255, 255, 255, 0.22) 0 5px, transparent 6px),
+        radial-gradient(circle at 34px 24px, rgba(255, 255, 255, 0.18) 0 6px, transparent 7px),
+        var(--accent);
+    }
+
+    label {
+      display: block;
+      margin: 16px 0 8px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 950;
+    }
+
+    textarea,
+    .finder,
+    .size-control {
+      border: 1px solid #d8d0bb;
+      border-radius: 14px;
+      background: var(--field-bg);
+      color: var(--ink);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 170px;
+      padding: 14px;
+      resize: vertical;
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
+    #topics {
+      min-height: 124px;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      margin-top: 18px;
+    }
+
+    .start-btn {
+      min-height: 58px;
+      border-radius: 999px;
+      font-size: 17px;
+      box-shadow: 0 18px 44px rgba(8, 127, 83, 0.24);
+    }
+
+    .stage {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .venue {
+      overflow: hidden;
+    }
+
+    .venue-head {
+      padding: 14px 20px 12px;
+    }
+
+    .venue-controls {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 10px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 10px;
+      flex-wrap: nowrap;
+      flex: 0 0 auto;
+      text-align: left;
+    }
+
+    .venue-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      min-height: 34px;
+      border: 1px solid var(--accent-border);
+      border-radius: 999px;
+      padding: 6px 11px;
+      background: var(--panel-bg);
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 1000;
+      white-space: nowrap;
+    }
+
+    .venue-label strong {
+      color: var(--ink);
+      font-size: 14px;
+    }
+
+    .round-title {
+      display: contents;
+    }
+
+    .round-title h3 {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      margin: 0;
+      border-radius: 999px;
+      padding: 6px 11px;
+      background: var(--accent-soft);
+      color: #0e2418;
+      font-size: 18px;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    .round-title .subtle {
+      display: none;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      gap: 6px;
+    }
+
+    .pill {
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--accent-border);
+      border-radius: 999px;
+      padding: 6px 9px;
+      color: #677061;
+      background: var(--panel-bg);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .pill strong { color: var(--ink); }
+
+    .toolstrip {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      flex-wrap: nowrap;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .toolstrip button {
+      min-height: 34px;
+      padding: 7px 9px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .finder {
+      width: 132px;
+      min-height: 34px;
+      padding: 7px 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .size-control {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0;
+      padding: 6px 7px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .size-control input {
+      width: 58px;
+      accent-color: var(--accent);
+    }
+
+    .floor-plan {
+      position: relative;
+      height: var(--floor-height, 520px);
+      overflow: hidden;
+      border: 0;
+      border-radius: 0;
+      background:
+        linear-gradient(rgba(8, 127, 83, 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(8, 127, 83, 0.07) 1px, transparent 1px),
+        rgba(247, 246, 234, 0.88);
+      background-size: 24px 24px;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .floor-label {
+      position: absolute;
+      left: 16px;
+      bottom: 14px;
+      color: #677061;
+      font-size: 12px;
+      font-weight: 900;
+      pointer-events: none;
+    }
+
+    .map-table {
+      --tw: 176px;
+      --th: 104px;
+      --table-color: #058b58;
+      position: absolute;
+      width: var(--tw);
+      height: var(--th);
+      border: 0;
+      padding: 0;
+      color: #fff;
+      background: transparent;
+      cursor: grab;
+      transform-origin: center;
+      z-index: 1;
+    }
+
+    .map-table.round {
+      --tw: 136px;
+      --th: 136px;
+    }
+
+    .map-table.dragging {
+      cursor: grabbing;
+      z-index: 6;
+    }
+
+    .map-table.selected,
+    .map-table.found {
+      z-index: 5;
+    }
+
+    .map-table-surface {
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      background: var(--table-color);
+      box-shadow: 0 16px 34px rgba(28, 48, 34, 0.16);
+      transform-origin: center;
+    }
+
+    .map-table.round .map-table-surface {
+      border-radius: 50%;
+    }
+
+    .map-table.selected .map-table-surface {
+      box-shadow: 0 0 0 6px rgba(8, 127, 83, 0.18), 0 24px 44px rgba(28, 48, 34, 0.14);
+    }
+
+    .map-table.found .map-table-surface {
+      box-shadow: 0 0 0 7px rgba(255, 220, 93, 0.72), 0 24px 48px rgba(28, 48, 34, 0.18);
+    }
+
+    .map-table-content {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 90%;
+      display: grid;
+      justify-items: center;
+      gap: 5px;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+    }
+
+    .map-table.long.vertical-angle .map-table-content {
+      width: 56%;
+      gap: 3px;
+    }
+
+    .map-topic {
+      max-width: 100%;
+      overflow: hidden;
+      color: #fff;
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: normal;
+      font-size: 19px;
+      font-weight: 1000;
+      line-height: 1.14;
+    }
+
+    .map-table.long.vertical-angle .map-topic {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      font-size: 15px;
+      line-height: 1.08;
+    }
+
+    .map-count {
+      color: rgba(255, 255, 255, 0.84);
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .map-table.long.vertical-angle .map-count {
+      font-size: 10px;
+    }
+
+    .map-names {
+      position: absolute;
+      inset: -32px -42px;
+      pointer-events: none;
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .map-name {
+      position: absolute;
+      min-width: 58px;
+      max-width: 92px;
+      overflow: hidden;
+      border: 2px solid var(--table-color);
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: #173024;
+      background: rgba(255, 253, 247, 0.96);
+      box-shadow: 0 8px 18px rgba(40, 37, 28, 0.12);
+      line-height: 1.05;
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transform: translate(-50%, -50%);
+    }
+
+    .map-name.repeat-name {
+      color: var(--danger);
+      text-decoration: underline;
+      text-decoration-color: var(--danger);
+    }
+
+    .person-marker {
+      position: absolute;
+      width: 64px;
+      min-height: 78px;
+      display: grid;
+      justify-items: center;
+      gap: 4px;
+      border: 0;
+      padding: 0;
+      color: #e60012;
+      background: transparent;
+      cursor: grab;
+      transform: translate(-50%, -50%);
+      z-index: 8;
+    }
+
+    .person-marker.dragging {
+      cursor: grabbing;
+      z-index: 10;
+    }
+
+    .person-marker-icon {
+      width: 44px;
+      height: 54px;
+      display: block;
+      filter: drop-shadow(0 10px 16px rgba(40, 37, 28, 0.18));
+    }
+
+    .person-marker-label {
+      max-width: 76px;
+      overflow: hidden;
+      border-radius: 999px;
+      padding: 4px 9px;
+      color: #fff;
+      background: #e60012;
+      box-shadow: 0 8px 18px rgba(230, 0, 18, 0.24);
+      font-size: 12px;
+      font-weight: 1000;
+      line-height: 1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tracker {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+      padding: 18px;
+    }
+
+    .tracker h2,
+    .tracker h3 {
+      margin: 0 0 10px;
+    }
+
+    .list {
+      display: grid;
+      gap: 8px;
+      max-height: 180px;
+      overflow: auto;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .history-item,
+    .repeat-item {
+      border-radius: 14px;
+      padding: 9px 11px;
+      background: rgba(255, 253, 247, 0.72);
+    }
+
+    .floating-action {
+      position: fixed;
+      bottom: 28px;
+      z-index: 18;
+      min-width: 190px;
+      min-height: 54px;
+      border-radius: 999px;
+      font-size: 16px;
+    }
+
+    .edit-floating {
+      left: 36px;
+      background: var(--danger);
+      box-shadow: 0 18px 44px rgba(201, 65, 51, 0.22);
+    }
+
+    .next-floating {
+      right: 36px;
+      background: var(--accent);
+      box-shadow: 0 18px 44px rgba(8, 127, 83, 0.24);
+    }
+
+    .time-up {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: none;
+      place-items: center;
+      background: rgba(16, 41, 29, 0.78);
+      backdrop-filter: blur(8px);
+    }
+
+    .time-up.show { display: grid; }
+
+    .time-up-card {
+      width: min(560px, calc(100vw - 40px));
+      border-radius: 28px;
+      padding: 34px;
+      text-align: center;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .time-up-card h2 {
+      margin: 0 0 12px;
+      font-size: 54px;
+      line-height: 1;
+    }
+
+    @media (max-width: 900px) {
+      .countdown-bar {
+        align-items: stretch;
+        padding: 12px 14px;
+        flex-direction: column;
+      }
+
+      .timer-controls { justify-content: space-between; }
+
+      .app { padding: 16px 14px 92px; }
+
+      .setup-grid { grid-template-columns: 1fr; }
+
+      .setup-hero h1 { font-size: 48px; }
+
+      .venue-head { padding: 22px 16px 16px; }
+
+      .venue-controls,
+      .topbar,
+      .toolstrip {
+        flex-wrap: wrap;
+        overflow-x: visible;
+      }
+
+      .toolstrip { justify-content: flex-start; }
+
+      .tracker { grid-template-columns: 1fr; }
+
+      .floating-action {
+        bottom: 14px;
+        min-width: 0;
+        width: calc(50% - 21px);
+        padding-left: 10px;
+        padding-right: 10px;
+        font-size: 14px;
+      }
+
+      .edit-floating { left: 14px; }
+      .next-floating { right: 14px; }
+    }
+  </style>
+</head>
+<body class="setup-mode" data-theme="green">
+  <section class="countdown-bar" aria-live="polite">
+    <div class="countdown-main">
+      <div class="countdown-badge">換</div>
+      <div>
+        <div class="countdown-label">討論倒計時</div>
+        <div id="countdownTime" class="countdown-time">10:00</div>
+      </div>
+    </div>
+    <div class="timer-controls">
+      <button id="timerMinusBtn" type="button" class="ghost">-</button>
+      <label class="timer-minutes" for="timerMinutes">
+        <input id="timerMinutes" type="number" min="1" max="180" value="10">
+        <span>分鐘</span>
+      </label>
+      <button id="timerPlusBtn" type="button" class="ghost">+</button>
+      <button id="timerStartBtn" type="button" class="timer-primary">開始</button>
+      <button id="timerResetBtn" type="button" class="ghost">重置</button>
+    </div>
+  </section>
+
+  <main class="app">
+    <section class="setup-grid">
+      <div class="setup-hero">
+        <div class="eyebrow">Table Talk</div>
+        <h1>讓命運決定你來跟誰聊</h1>
+        <p>輸入人名與題目後開始分桌。每一行題目會成為一張桌子，系統會盡量安排每輪遇到不同的人。</p>
+      </div>
+
+      <aside class="sidebar">
+        <h1>交流大風吹</h1>
+        <p class="subtle">先輸入人名與題目。題目數量會自動決定桌數。</p>
+
+        <div class="theme-switcher" aria-label="主題切換">
+          <button class="theme-button active" type="button" data-theme-choice="green">綠</button>
+          <button class="theme-button" type="button" data-theme-choice="red">紅</button>
+          <button class="theme-button" type="button" data-theme-choice="blue">藍</button>
+          <button class="theme-button" type="button" data-theme-choice="sousou">Sou Sou</button>
+        </div>
+
+        <label for="names">人名（一行一位，或用逗號分隔）</label>
+        <textarea id="names" spellcheck="false">Amy
+Ben
+Carol
+David
+Eva
+Frank
+Grace
+Henry
+Ivy
+Jack
+Kelly
+Leo
+Mia
+Noah
+Olivia
+Peter
+Quinn
+Ruby
+Sam
+Tina</textarea>
+
+        <label for="topics">題目（一行一桌）</label>
+        <textarea id="topics" spellcheck="false">暖身聊聊
+最近學到的事
+想嘗試的新技能
+今天的期待</textarea>
+
+        <div class="actions">
+          <button id="startBtn" class="start-btn" type="button">開始分桌 →</button>
+        </div>
+      </aside>
+    </section>
+
+    <section class="stage">
+      <section class="venue">
+        <div class="venue-head">
+          <div class="venue-controls">
+            <header class="topbar">
+              <div class="round-title">
+                <div class="venue-label">活動進行中 <strong>場地示意圖</strong></div>
+                <h3 id="roundTitle">第 0 輪</h3>
+                <p id="roundNote" class="subtle">點選桌子後可切換形狀、旋轉；直接拖曳即可調整位置。</p>
+              </div>
+              <div class="stats">
+                <span class="pill">人數 <strong id="peopleStat">20</strong></span>
+                <span class="pill">桌數 <strong id="tablesStat">4</strong></span>
+                <span class="pill">本輪重複 <strong id="roundRepeatStat">0</strong></span>
+                <span class="pill">總重複 <strong id="totalRepeatStat">0</strong></span>
+              </div>
+            </header>
+
+            <div class="toolstrip">
+              <input id="findPerson" class="finder" type="search" placeholder="找人或桌號">
+              <label class="size-control" for="mapHeight">高度
+                <input id="mapHeight" type="range" min="320" max="720" step="20" value="520">
+              </label>
+              <label class="size-control" for="mapZoom">縮放
+                <input id="mapZoom" type="range" min="70" max="140" step="5" value="100">
+              </label>
+              <button id="shapeBtn" class="ghost" type="button">切換形狀</button>
+              <button id="rotateLeftBtn" class="ghost" type="button" title="左轉" aria-label="左轉">↺</button>
+              <button id="rotateRightBtn" class="ghost" type="button" title="右轉" aria-label="右轉">↻</button>
+              <button id="resetMapBtn" class="ghost" type="button">重置場地</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="floorPlan" class="floor-plan" aria-label="可互動場地示意圖">
+          <div id="finderStatus" class="floor-label">入口 / Reception</div>
+        </div>
+      </section>
+
+      <aside class="tracker">
+        <section>
+          <h3>個人桌次</h3>
+          <div id="personHistory" class="list"></div>
+        </section>
+        <section>
+          <h3>重複同桌配對</h3>
+          <div id="repeatPairs" class="list"></div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <button id="editSettingsBtn" class="floating-action edit-floating" type="button">← 編輯設定</button>
+  <button id="nextBtn" class="floating-action next-floating" type="button">分下一組 Next →</button>
+
+  <div id="timeUpOverlay" class="time-up" role="dialog" aria-modal="true">
+    <div class="time-up-card">
+      <h2>時間到</h2>
+      <p class="subtle">這輪討論結束，可以前往下一組。</p>
+      <button id="timeUpDismissBtn" type="button">知道了</button>
+    </div>
+  </div>
+
+  <script>
+    const els = {
+      body: document.body,
+      names: document.querySelector("#names"),
+      topics: document.querySelector("#topics"),
+      startBtn: document.querySelector("#startBtn"),
+      nextBtn: document.querySelector("#nextBtn"),
+      editSettingsBtn: document.querySelector("#editSettingsBtn"),
+      themeButtons: document.querySelectorAll(".theme-button"),
+      floorPlan: document.querySelector("#floorPlan"),
+      findPerson: document.querySelector("#findPerson"),
+      finderStatus: document.querySelector("#finderStatus"),
+      mapHeight: document.querySelector("#mapHeight"),
+      mapZoom: document.querySelector("#mapZoom"),
+      shapeBtn: document.querySelector("#shapeBtn"),
+      rotateLeftBtn: document.querySelector("#rotateLeftBtn"),
+      rotateRightBtn: document.querySelector("#rotateRightBtn"),
+      resetMapBtn: document.querySelector("#resetMapBtn"),
+      roundTitle: document.querySelector("#roundTitle"),
+      roundNote: document.querySelector("#roundNote"),
+      peopleStat: document.querySelector("#peopleStat"),
+      tablesStat: document.querySelector("#tablesStat"),
+      roundRepeatStat: document.querySelector("#roundRepeatStat"),
+      totalRepeatStat: document.querySelector("#totalRepeatStat"),
+      personHistory: document.querySelector("#personHistory"),
+      repeatPairs: document.querySelector("#repeatPairs"),
+      countdownTime: document.querySelector("#countdownTime"),
+      timerMinutes: document.querySelector("#timerMinutes"),
+      timerMinusBtn: document.querySelector("#timerMinusBtn"),
+      timerPlusBtn: document.querySelector("#timerPlusBtn"),
+      timerStartBtn: document.querySelector("#timerStartBtn"),
+      timerResetBtn: document.querySelector("#timerResetBtn"),
+      timeUpOverlay: document.querySelector("#timeUpOverlay"),
+      timeUpDismissBtn: document.querySelector("#timeUpDismissBtn")
+    };
+
+    const state = {
+      rounds: [],
+      pairCounts: new Map(),
+      personTables: new Map(),
+      venueTables: [],
+      selectedTable: 1,
+      theme: "green",
+      mapZoom: 1,
+      mapHeight: 520,
+      rubyMarker: { x: 50, y: 50 },
+      drag: null,
+      timerSeconds: 600,
+      timerRunning: false,
+      timerEndsAt: null,
+      timerId: null
+    };
+
+    const STORAGE_KEY = "table-arrangement-fusion-state-v1";
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]);
+    }
+
+    function saveState() {
+      const data = {
+        version: 1,
+        appMode: els.body.className.includes("running-mode") ? "running" : "setup",
+        names: els.names.value,
+        topics: els.topics.value,
+        search: els.findPerson.value,
+        theme: state.theme,
+        rounds: state.rounds,
+        pairCounts: [...state.pairCounts.entries()],
+        personTables: [...state.personTables.entries()],
+        venueTables: state.venueTables,
+        selectedTable: state.selectedTable,
+        mapZoom: state.mapZoom,
+        mapHeight: state.mapHeight,
+        rubyMarker: state.rubyMarker,
+        timerMinutes: els.timerMinutes.value,
+        timerSeconds: state.timerSeconds
+      };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch {
+        // Ignore storage failures so the app remains usable in private or restricted contexts.
+      }
+    }
+
+    function loadState() {
+      let data = null;
+      try {
+        data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+      } catch {
+        return;
+      }
+      if (!data || data.version !== 1) return;
+
+      if (typeof data.names === "string") els.names.value = data.names;
+      if (typeof data.topics === "string") els.topics.value = data.topics;
+      if (typeof data.search === "string") els.findPerson.value = data.search;
+      if (typeof data.timerMinutes === "string" || typeof data.timerMinutes === "number") {
+        els.timerMinutes.value = data.timerMinutes;
+      }
+
+      state.theme = ["green", "red", "blue", "sousou"].includes(data.theme) ? data.theme : "green";
+      state.rounds = Array.isArray(data.rounds) ? data.rounds : [];
+      state.pairCounts = new Map(Array.isArray(data.pairCounts) ? data.pairCounts : []);
+      state.personTables = new Map(Array.isArray(data.personTables) ? data.personTables : []);
+      state.venueTables = Array.isArray(data.venueTables) ? data.venueTables : [];
+      state.selectedTable = Number(data.selectedTable) || 1;
+      state.mapZoom = Number(data.mapZoom) || 1;
+      state.mapHeight = Number(data.mapHeight) || 520;
+      state.rubyMarker = data.rubyMarker && Number.isFinite(Number(data.rubyMarker.x)) && Number.isFinite(Number(data.rubyMarker.y))
+        ? { x: Number(data.rubyMarker.x), y: Number(data.rubyMarker.y) }
+        : { x: 50, y: 50 };
+      state.timerSeconds = Number.isFinite(Number(data.timerSeconds)) ? Number(data.timerSeconds) : timerValueSeconds();
+      state.timerRunning = false;
+      state.timerEndsAt = null;
+
+      els.body.className = data.appMode === "running" && state.rounds.length ? "running-mode" : "setup-mode";
+    }
+
+    function parseNames() {
+      return [...new Set(els.names.value.split(/[\n,，、]+/).map(name => name.trim()).filter(Boolean))];
+    }
+
+    function parseTopics() {
+      return els.topics.value.split(/\n+/).map(topic => topic.trim()).filter(Boolean);
+    }
+
+    function tableCount() {
+      return Math.max(1, Math.min(parseTopics().length || 1, parseNames().length || 1));
+    }
+
+    function pairKey(a, b) {
+      return [a, b].sort().join("|||");
+    }
+
+    function shuffle(items) {
+      const copy = [...items];
+      for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function capacities(total, count) {
+      const base = Math.floor(total / count);
+      const extra = total % count;
+      return Array.from({ length: count }, (_, index) => base + (index < extra ? 1 : 0));
+    }
+
+    function scoreTable(person, table, tableIndex) {
+      let score = (state.personTables.get(person) || []).filter(id => id === tableIndex + 1).length * 5;
+      for (const other of table) score += (state.pairCounts.get(pairKey(person, other)) || 0) * 100;
+      return score + Math.random() * 0.01;
+    }
+
+    function buildRound(names, count) {
+      const caps = capacities(names.length, count);
+      const tables = caps.map(() => []);
+      const people = shuffle(names);
+
+      for (const person of people) {
+        const choices = tables
+          .map((table, index) => ({ index, table, score: table.length >= caps[index] ? Infinity : scoreTable(person, table, index) }))
+          .sort((a, b) => a.score - b.score || a.table.length - b.table.length);
+        tables[choices[0].index].push(person);
+      }
+
+      return tables;
+    }
+
+    function countRoundRepeats(tables) {
+      let repeats = 0;
+      for (const table of tables) {
+        for (let i = 0; i < table.length; i += 1) {
+          for (let j = i + 1; j < table.length; j += 1) {
+            if ((state.pairCounts.get(pairKey(table[i], table[j])) || 0) > 0) repeats += 1;
+          }
+        }
+      }
+      return repeats;
+    }
+
+    function generateRound(names, count) {
+      let best = null;
+      let bestRepeats = Infinity;
+      const attempts = Math.max(1200, names.length * names.length * count * (state.rounds.length + 1));
+      for (let i = 0; i < attempts; i += 1) {
+        const tables = buildRound(names, count);
+        const repeats = countRoundRepeats(tables);
+        if (repeats < bestRepeats) {
+          best = tables;
+          bestRepeats = repeats;
+          if (repeats === 0) break;
+        }
+      }
+      return { tables: best, repeats: bestRepeats, attempts };
+    }
+
+    function recordRound(round) {
+      state.rounds.push(round);
+      round.tables.forEach((table, index) => {
+        for (const person of table) {
+          const history = state.personTables.get(person) || [];
+          history.push(index + 1);
+          state.personTables.set(person, history);
+        }
+        for (let i = 0; i < table.length; i += 1) {
+          for (let j = i + 1; j < table.length; j += 1) {
+            const key = pairKey(table[i], table[j]);
+            state.pairCounts.set(key, (state.pairCounts.get(key) || 0) + 1);
+          }
+        }
+      });
+    }
+
+    function startActivity() {
+      const names = parseNames();
+      if (names.length < 2 || !parseTopics().length) return;
+      state.rounds = [];
+      state.pairCounts = new Map();
+      state.personTables = new Map();
+      state.selectedTable = 1;
+      resetVenueLayout();
+      els.body.className = "running-mode";
+      nextRound();
+      saveState();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function editSettings() {
+      els.body.className = "setup-mode";
+      stopTimer();
+      render();
+      saveState();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function nextRound() {
+      const names = parseNames();
+      const count = tableCount();
+      const generated = generateRound(names, count);
+      recordRound(generated);
+      syncVenueTables(count);
+      render();
+      saveState();
+    }
+
+    function defaultVenueTables(count) {
+      const cols = Math.ceil(Math.sqrt(count));
+      const rows = Math.ceil(count / cols);
+      return Array.from({ length: count }, (_, index) => {
+        const col = index % cols;
+        const row = Math.floor(index / cols);
+        return {
+          id: index + 1,
+          x: 14 + ((col + 0.5) / cols) * 72,
+          y: 10 + ((row + 0.5) / rows) * 76,
+          shape: "long",
+          angle: 0
+        };
+      });
+    }
+
+    function syncVenueTables(count) {
+      const defaults = defaultVenueTables(count);
+      state.venueTables = defaults.map(table => ({ ...table, ...(state.venueTables.find(existing => existing.id === table.id) || {}) }));
+      if (!state.venueTables.some(table => table.id === state.selectedTable)) state.selectedTable = 1;
+    }
+
+    function resetVenueLayout() {
+      state.venueTables = defaultVenueTables(tableCount());
+      state.selectedTable = 1;
+      renderVenue();
+      saveState();
+    }
+
+    function currentRound() {
+      return state.rounds.at(-1);
+    }
+
+    function membersFor(tableId) {
+      return currentRound()?.tables[tableId - 1] || [];
+    }
+
+    function normalizeSearchText(value) {
+      return String(value).normalize("NFKC").trim().toLocaleLowerCase().replace(/\s+/g, "");
+    }
+
+    function findTableFromQuery() {
+      const raw = els.findPerson.value.trim();
+      const query = normalizeSearchText(raw);
+      if (!query) return { tableId: null, label: "入口 / Reception" };
+
+      const normalizedRaw = raw.normalize("NFKC").trim();
+      const tableMatch = normalizedRaw.match(/^t(?:able)?\s*(\d+)$/i) || normalizedRaw.match(/^桌\s*(\d+)$/);
+      if (tableMatch) {
+        const id = Number(tableMatch[1]);
+        if (state.venueTables.some(table => table.id === id)) return { tableId: id, label: `已標示 Table ${id}` };
+      }
+
+      const round = currentRound();
+      if (!round) return { tableId: null, label: "先開始分桌，再搜尋人名。" };
+
+      for (let i = 0; i < round.tables.length; i += 1) {
+        const person = round.tables[i].find(name => normalizeSearchText(name).includes(query));
+        if (person) return { tableId: i + 1, label: `${person} 在 Table ${i + 1}` };
+      }
+      return { tableId: null, label: "找不到符合的人名或桌號。" };
+    }
+
+    function repeatedFor(table, person) {
+      return table.filter(other => other !== person && (state.pairCounts.get(pairKey(person, other)) || 0) > 1).length;
+    }
+
+    function mapNamePosition(index, total) {
+      if (total <= 4) return [{ x: 18, y: 0 }, { x: 82, y: 0 }, { x: 18, y: 100 }, { x: 82, y: 100 }][index] || { x: 50, y: 100 };
+      if (total <= 6) {
+        if (index < 3) return { x: [14, 50, 86][index], y: 0 };
+        return { x: (total - 3 === 2 ? [28, 72] : [14, 50, 86])[index - 3], y: 100 };
+      }
+      return [{ x: 14, y: 0 }, { x: 50, y: 0 }, { x: 86, y: 0 }, { x: 14, y: 100 }, { x: 50, y: 100 }, { x: 86, y: 100 }, { x: 0, y: 50 }, { x: 100, y: 50 }][index % 8];
+    }
+
+    function tableColor(tableId) {
+      return `var(--table-${((tableId - 1) % 4) + 1})`;
+    }
+
+    function renderMapNames(table, members) {
+      return `<div class="map-names">${members.map((name, index) => {
+        const repeats = repeatedFor(members, name);
+        const pos = mapNamePosition(index, members.length);
+        const title = repeats ? `${name} 本輪有 ${repeats} 位舊同桌` : name;
+        return `<div class="map-name ${repeats ? "repeat-name" : ""}" style="left:${pos.x}%;top:${pos.y}%;" title="${escapeHtml(title)}">${escapeHtml(name)}</div>`;
+      }).join("")}</div>`;
+    }
+
+    function renderVenue() {
+      syncVenueTables(tableCount());
+      const topics = parseTopics();
+      const found = findTableFromQuery();
+      els.floorPlan.style.setProperty("--floor-height", `${state.mapHeight}px`);
+      els.mapHeight.value = state.mapHeight;
+      els.mapZoom.value = Math.round(state.mapZoom * 100);
+
+      const tablesMarkup = state.venueTables.map(table => {
+        const members = membersFor(table.id);
+        const angleClass = table.angle % 180 === 90 ? "vertical-angle" : "horizontal-angle";
+        return `
+          <button type="button"
+            class="map-table ${table.shape} ${angleClass} ${table.id === state.selectedTable ? "selected" : ""} ${table.id === found.tableId ? "found" : ""}"
+            data-table-id="${table.id}"
+            style="--table-color:${tableColor(table.id)};left:${table.x}%;top:${table.y}%;transform:translate(-50%,-50%) scale(${state.mapZoom});"
+            aria-label="Table ${table.id}">
+            <div class="map-table-surface" style="transform:rotate(${table.angle}deg);"></div>
+            <div class="map-table-content">
+              <span class="map-topic">${escapeHtml(topics[table.id - 1] || `Table ${table.id}`)}</span>
+              <span class="map-count">${members.length || "未排"} 位</span>
+            </div>
+            ${renderMapNames(table, members)}
+          </button>
+        `;
+      }).join("");
+
+      const rubyMarkup = `
+        <button
+          type="button"
+          class="person-marker"
+          data-marker-id="ruby"
+          style="left:${state.rubyMarker.x}%;top:${state.rubyMarker.y}%;"
+          aria-label="Ruby marker">
+          <svg class="person-marker-icon" viewBox="0 0 48 58" aria-hidden="true">
+            <circle cx="24" cy="10" r="9" fill="currentColor"></circle>
+            <path d="M10 56c1.1-17.7 5.6-28 14-28s12.9 10.3 14 28H10Z" fill="currentColor"></path>
+            <path d="M6 33c4.1-5.5 9.9-8.2 18-8.2S37.9 27.5 42 33" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round"></path>
+          </svg>
+          <span class="person-marker-label">Ruby</span>
+        </button>
+      `;
+
+      els.floorPlan.innerHTML = `${tablesMarkup}${rubyMarkup}<div id="finderStatus" class="floor-label">${escapeHtml(found.label)}</div>`;
+    }
+
+    function renderStats() {
+      const names = parseNames();
+      const round = currentRound();
+      const totalRepeats = [...state.pairCounts.values()].reduce((sum, count) => sum + Math.max(0, count - 1), 0);
+      els.peopleStat.textContent = names.length;
+      els.tablesStat.textContent = tableCount();
+      els.roundTitle.textContent = `第 ${state.rounds.length} 輪`;
+      els.roundNote.textContent = round
+        ? `嘗試 ${round.attempts.toLocaleString()} 次，重複 ${round.repeats} 組。拖曳桌子可調整位置。`
+        : "點選桌子後可切換形狀、旋轉；直接拖曳即可調整位置。";
+      els.roundRepeatStat.textContent = round?.repeats ?? 0;
+      els.totalRepeatStat.textContent = totalRepeats;
+    }
+
+    function renderTracker() {
+      const names = parseNames();
+      els.personHistory.innerHTML = names.map(name => {
+        const history = state.personTables.get(name) || [];
+        return `<div class="history-item"><strong>${escapeHtml(name)}</strong> ${history.length ? history.map(id => `T${id}`).join(" → ") : "尚未分桌"}</div>`;
+      }).join("");
+
+      const repeated = [...state.pairCounts.entries()].filter(([, count]) => count > 1).sort((a, b) => b[1] - a[1]);
+      els.repeatPairs.innerHTML = repeated.length
+        ? repeated.map(([key, count]) => `<div class="repeat-item">${escapeHtml(key.replace("|||", " + "))}：${count} 次</div>`).join("")
+        : `<div class="repeat-item">目前沒有重複同桌配對。</div>`;
+    }
+
+    function render() {
+      renderStats();
+      renderVenue();
+      renderTracker();
+      renderTimer();
+    }
+
+    function applyTheme(theme) {
+      state.theme = theme;
+      els.body.dataset.theme = theme;
+      els.themeButtons.forEach(button => {
+        button.classList.toggle("active", button.dataset.themeChoice === theme);
+      });
+      renderVenue();
+      saveState();
+    }
+
+    function selectedTable() {
+      return state.venueTables.find(table => table.id === state.selectedTable) || state.venueTables[0];
+    }
+
+    function floorPoint(event) {
+      const rect = els.floorPlan.getBoundingClientRect();
+      return {
+        x: Math.max(6, Math.min(94, ((event.clientX - rect.left) / rect.width) * 100)),
+        y: Math.max(8, Math.min(92, ((event.clientY - rect.top) / rect.height) * 100))
+      };
+    }
+
+    function onPointerDown(event) {
+      const marker = event.target.closest(".person-marker");
+      if (marker) {
+        const point = floorPoint(event);
+        state.drag = {
+          type: "marker",
+          id: marker.dataset.markerId,
+          offsetX: point.x - state.rubyMarker.x,
+          offsetY: point.y - state.rubyMarker.y
+        };
+        marker.classList.add("dragging");
+        marker.setPointerCapture(event.pointerId);
+        return;
+      }
+
+      const target = event.target.closest(".map-table");
+      if (!target) return;
+      const id = Number(target.dataset.tableId);
+      state.selectedTable = id;
+      els.floorPlan.querySelectorAll(".map-table").forEach(table => table.classList.remove("selected"));
+      target.classList.add("selected");
+      const table = selectedTable();
+      const point = floorPoint(event);
+      state.drag = { type: "table", id, offsetX: point.x - table.x, offsetY: point.y - table.y };
+      target.classList.add("dragging");
+      target.setPointerCapture(event.pointerId);
+    }
+
+    function onPointerMove(event) {
+      if (!state.drag) return;
+      const point = floorPoint(event);
+
+      if (state.drag.type === "marker") {
+        state.rubyMarker.x = Math.max(4, Math.min(96, point.x - state.drag.offsetX));
+        state.rubyMarker.y = Math.max(7, Math.min(93, point.y - state.drag.offsetY));
+        const marker = els.floorPlan.querySelector('[data-marker-id="ruby"]');
+        marker.style.left = `${state.rubyMarker.x}%`;
+        marker.style.top = `${state.rubyMarker.y}%`;
+        return;
+      }
+
+      const table = state.venueTables.find(item => item.id === state.drag.id);
+      table.x = Math.max(6, Math.min(94, point.x - state.drag.offsetX));
+      table.y = Math.max(8, Math.min(92, point.y - state.drag.offsetY));
+      const target = els.floorPlan.querySelector(`[data-table-id="${table.id}"]`);
+      target.style.left = `${table.x}%`;
+      target.style.top = `${table.y}%`;
+    }
+
+    function onPointerUp() {
+      state.drag = null;
+      els.floorPlan.querySelectorAll(".dragging").forEach(table => table.classList.remove("dragging"));
+      saveState();
+    }
+
+    function toggleShape() {
+      const table = selectedTable();
+      table.shape = table.shape === "round" ? "long" : "round";
+      renderVenue();
+      saveState();
+    }
+
+    function rotateSelected(delta) {
+      const table = selectedTable();
+      table.angle = (table.angle + delta + 360) % 360;
+      renderVenue();
+      saveState();
+    }
+
+    function timerValueSeconds() {
+      return Math.max(1, Math.min(180, Number(els.timerMinutes.value) || 10)) * 60;
+    }
+
+    function renderTimer() {
+      const seconds = Math.max(0, state.timerSeconds);
+      const minutes = Math.floor(seconds / 60);
+      const rest = seconds % 60;
+      els.countdownTime.textContent = `${minutes}:${String(rest).padStart(2, "0")}`;
+      els.timerStartBtn.textContent = state.timerRunning ? "暫停" : "開始";
+    }
+
+    function tickTimer() {
+      state.timerSeconds = Math.max(0, Math.ceil((state.timerEndsAt - Date.now()) / 1000));
+      renderTimer();
+      if (state.timerSeconds <= 0) {
+        stopTimer();
+        els.timeUpOverlay.classList.add("show");
+      }
+    }
+
+    function startTimer() {
+      state.timerRunning = true;
+      state.timerEndsAt = Date.now() + state.timerSeconds * 1000;
+      state.timerId = setInterval(tickTimer, 250);
+      tickTimer();
+      saveState();
+    }
+
+    function stopTimer() {
+      state.timerRunning = false;
+      clearInterval(state.timerId);
+      state.timerId = null;
+      renderTimer();
+      saveState();
+    }
+
+    function toggleTimer() {
+      if (state.timerRunning) stopTimer();
+      else startTimer();
+    }
+
+    function resetTimer() {
+      stopTimer();
+      state.timerSeconds = timerValueSeconds();
+      els.timeUpOverlay.classList.remove("show");
+      renderTimer();
+      saveState();
+    }
+
+    els.startBtn.addEventListener("click", startActivity);
+    els.nextBtn.addEventListener("click", nextRound);
+    els.editSettingsBtn.addEventListener("click", editSettings);
+    els.findPerson.addEventListener("input", () => {
+      renderVenue();
+      saveState();
+    });
+    els.shapeBtn.addEventListener("click", toggleShape);
+    els.rotateLeftBtn.addEventListener("click", () => rotateSelected(-45));
+    els.rotateRightBtn.addEventListener("click", () => rotateSelected(45));
+    els.resetMapBtn.addEventListener("click", resetVenueLayout);
+    els.mapHeight.addEventListener("input", () => {
+      state.mapHeight = Number(els.mapHeight.value);
+      els.floorPlan.style.setProperty("--floor-height", `${state.mapHeight}px`);
+      saveState();
+    });
+    els.mapZoom.addEventListener("input", () => {
+      state.mapZoom = Number(els.mapZoom.value) / 100;
+      renderVenue();
+      saveState();
+    });
+    els.floorPlan.addEventListener("pointerdown", onPointerDown);
+    els.floorPlan.addEventListener("pointermove", onPointerMove);
+    els.floorPlan.addEventListener("pointerup", onPointerUp);
+    els.floorPlan.addEventListener("pointercancel", onPointerUp);
+    els.names.addEventListener("input", () => {
+      render();
+      saveState();
+    });
+    els.topics.addEventListener("input", () => {
+      render();
+      saveState();
+    });
+    els.timerStartBtn.addEventListener("click", toggleTimer);
+    els.timerResetBtn.addEventListener("click", resetTimer);
+    els.timerMinusBtn.addEventListener("click", () => {
+      els.timerMinutes.value = Math.max(1, Number(els.timerMinutes.value) - 1);
+      resetTimer();
+    });
+    els.timerPlusBtn.addEventListener("click", () => {
+      els.timerMinutes.value = Math.min(180, Number(els.timerMinutes.value) + 1);
+      resetTimer();
+    });
+    els.timerMinutes.addEventListener("input", resetTimer);
+    els.timeUpDismissBtn.addEventListener("click", () => els.timeUpOverlay.classList.remove("show"));
+    els.themeButtons.forEach(button => {
+      button.addEventListener("click", () => applyTheme(button.dataset.themeChoice));
+    });
+
+    loadState();
+    syncVenueTables(tableCount());
+    applyTheme(state.theme);
+    render();
+  </script>
+</body>
+</html>

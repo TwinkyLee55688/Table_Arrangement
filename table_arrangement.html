@@ -216,7 +216,7 @@
 
     .app {
       display: grid;
-      grid-template-columns: minmax(270px, 330px) minmax(0, 1fr) minmax(230px, 280px);
+      grid-template-columns: minmax(270px, 330px) minmax(0, 1fr);
       gap: 18px;
       min-height: calc(100vh - 78px);
       padding: 18px;
@@ -243,6 +243,7 @@
     }
 
     .table-panel {
+      display: none;
       padding: 12px;
     }
 
@@ -380,22 +381,37 @@
     }
 
     .topbar {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-      padding: 14px 16px;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      padding: 0;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 12px;
+      justify-content: flex-end;
+      gap: 8px;
       flex-wrap: wrap;
+      margin-left: auto;
+      text-align: right;
     }
 
     .round-title {
       display: flex;
       flex-direction: column;
       gap: 2px;
+      align-items: flex-end;
+      max-width: 390px;
+    }
+
+    .round-title h2 {
+      margin-bottom: 0;
+      font-size: 16px;
+    }
+
+    .round-title .subtle {
+      display: none;
+      font-size: 12px;
+      line-height: 1.35;
     }
 
     .stats {
@@ -416,6 +432,14 @@
       background: #fffdf8;
       font-size: 13px;
       color: var(--muted);
+    }
+
+    .venue-status {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      min-width: min(100%, 420px);
     }
 
     .pill strong {
@@ -650,6 +674,14 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       min-width: 0;
+    }
+
+    .map-name.repeat-name {
+      color: #b8483b;
+      font-weight: 950;
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 2px;
     }
 
     .table-card {
@@ -914,6 +946,16 @@
 
       .topbar {
         align-items: stretch;
+        justify-content: flex-start;
+        text-align: left;
+        width: 100%;
+      }
+
+      .round-title,
+      .venue-status {
+        align-items: flex-start;
+        max-width: none;
+        width: 100%;
       }
 
       .stats {
@@ -997,38 +1039,39 @@ Peter</textarea>
     </aside>
 
     <section class="stage">
-      <header class="topbar">
-        <div class="round-title">
-          <h2 id="roundTitle">尚未開始</h2>
-          <p id="roundNote" class="subtle">按下 Next 產生第一輪座位。</p>
-        </div>
-        <div class="stats" aria-live="polite">
-          <span class="pill">人數 <strong id="peopleStat">16</strong></span>
-          <span class="pill">桌數 <strong id="tablesStat">4</strong></span>
-          <span class="pill">本輪重複 <strong id="roundRepeatStat">0</strong></span>
-          <span class="pill">總重複 <strong id="totalRepeatStat">0</strong></span>
-        </div>
-      </header>
-
       <section class="venue">
         <div class="venue-head">
           <div>
             <h2>場地示意圖</h2>
             <p class="subtle">選取桌子後可切換形狀、旋轉；開啟編輯後可拖曳位置。</p>
           </div>
-          <div class="toolstrip">
-            <input id="findPerson" class="finder" type="search" placeholder="找人或桌號">
-            <label class="size-control" for="mapSize">高度
-              <input id="mapSize" type="range" min="280" max="620" step="20" value="360">
-            </label>
-            <label class="size-control" for="mapZoom">縮放
-              <input id="mapZoom" type="range" min="70" max="140" step="5" value="100">
-            </label>
-            <button id="editMapBtn" class="attention">編輯位置</button>
-            <button id="shapeBtn" class="ghost">切換形狀</button>
-            <button id="rotateLeftBtn" class="ghost" title="左轉" aria-label="左轉">↺</button>
-            <button id="rotateRightBtn" class="ghost" title="右轉" aria-label="右轉">↻</button>
-            <button id="resetMapBtn" class="ghost">重置場地</button>
+          <div class="venue-status">
+            <header class="topbar">
+              <div class="round-title">
+                <h2 id="roundTitle">尚未開始</h2>
+                <p id="roundNote" class="subtle">按下 Next 產生第一輪座位。</p>
+              </div>
+              <div class="stats" aria-live="polite">
+                <span class="pill">人數 <strong id="peopleStat">16</strong></span>
+                <span class="pill">桌數 <strong id="tablesStat">4</strong></span>
+                <span class="pill">本輪重複 <strong id="roundRepeatStat">0</strong></span>
+                <span class="pill">總重複 <strong id="totalRepeatStat">0</strong></span>
+              </div>
+            </header>
+            <div class="toolstrip">
+              <input id="findPerson" class="finder" type="search" placeholder="找人或桌號">
+              <label class="size-control" for="mapSize">高度
+                <input id="mapSize" type="range" min="280" max="620" step="20" value="360">
+              </label>
+              <label class="size-control" for="mapZoom">縮放
+                <input id="mapZoom" type="range" min="70" max="140" step="5" value="100">
+              </label>
+              <button id="editMapBtn" class="attention">編輯位置</button>
+              <button id="shapeBtn" class="ghost">切換形狀</button>
+              <button id="rotateLeftBtn" class="ghost" title="左轉" aria-label="左轉">↺</button>
+              <button id="rotateRightBtn" class="ghost" title="右轉" aria-label="右轉">↻</button>
+              <button id="resetMapBtn" class="ghost">重置場地</button>
+            </div>
           </div>
         </div>
         <div id="floorPlan" class="floor-plan" aria-label="可互動場地示意圖">
@@ -1063,6 +1106,8 @@ Peter</textarea>
   </main>
 
   <script>
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+
     const els = {
       countdownBar: document.querySelector("#countdownBar"),
       countdownTime: document.querySelector("#countdownTime"),
@@ -1316,6 +1361,16 @@ Peter</textarea>
       return Math.max(7.5, Math.min(base, base - crowdPenalty - lengthPenalty));
     }
 
+    function countRepeatedTablemates(table, person) {
+      let repeats = 0;
+      for (const other of table) {
+        if (other !== person && (state.pairCounts.get(pairKey(person, other)) || 0) > 1) {
+          repeats += 1;
+        }
+      }
+      return repeats;
+    }
+
     function findTableFromQuery() {
       const query = els.findPerson.value.trim().toLowerCase();
       const round = state.rounds.at(-1);
@@ -1378,7 +1433,11 @@ Peter</textarea>
       const fontSize = getMapNameFontSize(members, table.shape, table.angle);
       return `
         <div class="map-names" style="font-size: ${fontSize}px;">
-          ${members.map(name => `<div class="map-name" title="${escapeHtml(name)}">${escapeHtml(name)}</div>`).join("")}
+          ${members.map(name => {
+            const repeats = countRepeatedTablemates(members, name);
+            const title = repeats ? `${name} 本輪有 ${repeats} 位舊同桌` : name;
+            return `<div class="map-name ${repeats ? "repeat-name" : ""}" title="${escapeHtml(title)}">${escapeHtml(name)}</div>`;
+          }).join("")}
         </div>
       `;
     }
@@ -1786,13 +1845,7 @@ Peter</textarea>
     }
 
     function getRoundPairRepeatCount(table, person) {
-      let repeats = 0;
-      for (const other of table) {
-        if (other !== person && (state.pairCounts.get(pairKey(person, other)) || 0) > 1) {
-          repeats += 1;
-        }
-      }
-      return repeats;
+      return countRepeatedTablemates(table, person);
     }
 
     function renderTables(round) {
