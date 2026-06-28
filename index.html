@@ -58,6 +58,77 @@
       border-bottom-color: #8d3128;
     }
 
+    .countdown-bar.finished {
+      animation: timerPulse 900ms ease-in-out infinite;
+      background: #b8483b;
+      color: #fff;
+      border-bottom-color: #8d3128;
+    }
+
+    @keyframes timerPulse {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.18); }
+    }
+
+    .time-up-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background: rgba(37, 37, 35, 0.46);
+    }
+
+    .time-up-overlay.show {
+      display: grid;
+    }
+
+    .time-up-card {
+      width: min(560px, 100%);
+      border: 2px solid #8d3128;
+      border-radius: 8px;
+      padding: 28px;
+      background: #fffdf8;
+      color: var(--ink);
+      text-align: center;
+      box-shadow: 0 24px 70px rgba(37, 37, 35, 0.28);
+      animation: timeUpPop 280ms ease-out;
+    }
+
+    .time-up-card h2 {
+      margin: 0 0 10px;
+      color: #b8483b;
+      font-size: clamp(42px, 7vw, 76px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .time-up-card p {
+      margin-bottom: 18px;
+      color: var(--muted);
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .time-up-card button {
+      min-width: 120px;
+      min-height: 44px;
+      font-size: 16px;
+      background: var(--accent);
+    }
+
+    @keyframes timeUpPop {
+      from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.97);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
     .countdown-main {
       display: flex;
       align-items: center;
@@ -477,13 +548,6 @@
       padding: 14px;
     }
 
-    .map-table.square {
-      width: 126px;
-      height: 126px;
-      border-radius: 10px;
-      padding: 12px;
-    }
-
     .map-table.long {
       border-radius: 12px;
     }
@@ -500,10 +564,6 @@
 
     .map-table.round .map-table-surface {
       border-radius: 999px;
-    }
-
-    .map-table.square .map-table-surface {
-      border-radius: 10px;
     }
 
     .map-table.selected .map-table-surface {
@@ -539,25 +599,28 @@
       position: absolute;
       left: 50%;
       top: 50%;
-      width: min(150px, 130%);
+      width: 82%;
       min-width: 0;
       display: grid;
-      gap: 4px;
+      gap: 3px;
       justify-items: center;
-      padding: 7px 9px;
-      border-radius: 8px;
-      background: rgba(255, 253, 248, 0.78);
-      box-shadow: 0 3px 10px rgba(40, 37, 28, 0.08);
+      padding: 0;
+      text-shadow: 0 1px 0 rgba(255, 253, 248, 0.82);
       pointer-events: none;
       transform-origin: center;
     }
 
     .map-table.round .map-table-content {
-      width: min(138px, 118%);
+      width: 76%;
     }
 
     .map-table.long .map-table-content {
-      width: min(158px, 136%);
+      width: 82%;
+    }
+
+    .map-table.long.right-angle .map-table-content {
+      width: 54%;
+      gap: 2px;
     }
 
     .map-names {
@@ -574,6 +637,12 @@
     .map-table.round .map-names {
       grid-template-columns: 1fr;
       gap: 1px;
+    }
+
+    .map-table.long.right-angle .map-names {
+      grid-template-columns: 1fr;
+      gap: 1px;
+      line-height: 1.05;
     }
 
     .map-name {
@@ -872,6 +941,13 @@
       <button id="timerResetBtn" class="ghost">重置</button>
     </div>
   </section>
+  <div id="timeUpOverlay" class="time-up-overlay" role="dialog" aria-modal="true" aria-labelledby="timeUpTitle">
+    <div class="time-up-card">
+      <h2 id="timeUpTitle">時間到</h2>
+      <p>請移動到下一桌，或開始下一輪討論。</p>
+      <button id="timeUpDismissBtn" type="button">知道了</button>
+    </div>
+  </div>
 
   <main class="app">
     <aside class="sidebar">
@@ -995,6 +1071,8 @@ Peter</textarea>
       timerPlusBtn: document.querySelector("#timerPlusBtn"),
       timerStartBtn: document.querySelector("#timerStartBtn"),
       timerResetBtn: document.querySelector("#timerResetBtn"),
+      timeUpOverlay: document.querySelector("#timeUpOverlay"),
+      timeUpDismissBtn: document.querySelector("#timeUpDismissBtn"),
       names: document.querySelector("#names"),
       tableCount: document.querySelector("#tableCount"),
       searchMode: document.querySelector("#searchMode"),
@@ -1038,6 +1116,7 @@ Peter</textarea>
       timerRunning: false,
       timerEndsAt: null,
       timerId: null,
+      timerFinished: false,
       drag: null
     };
 
@@ -1060,7 +1139,9 @@ Peter</textarea>
       els.countdownTime.textContent = formatTime(state.timerSeconds);
       els.timerStartBtn.textContent = state.timerRunning ? "暫停" : "開始";
       els.countdownBar.classList.toggle("warning", state.timerSeconds <= 300 && state.timerSeconds > 60);
-      els.countdownBar.classList.toggle("urgent", state.timerSeconds <= 60);
+      els.countdownBar.classList.toggle("urgent", state.timerSeconds <= 60 && !state.timerFinished);
+      els.countdownBar.classList.toggle("finished", state.timerFinished);
+      els.timeUpOverlay.classList.toggle("show", state.timerFinished);
     }
 
     function setTimerFromInput() {
@@ -1068,6 +1149,7 @@ Peter</textarea>
       els.timerMinutes.value = minutes;
       state.timerSeconds = minutes * 60;
       state.timerEndsAt = null;
+      state.timerFinished = false;
       renderTimer();
     }
 
@@ -1087,6 +1169,7 @@ Peter</textarea>
       state.timerSeconds = Math.max(0, (state.timerEndsAt - Date.now()) / 1000);
       if (state.timerSeconds <= 0) {
         state.timerRunning = false;
+        state.timerFinished = true;
         clearInterval(state.timerId);
         state.timerId = null;
       }
@@ -1106,6 +1189,7 @@ Peter</textarea>
       }
 
       if (state.timerSeconds <= 0) setTimerFromInput();
+      state.timerFinished = false;
       state.timerRunning = true;
       state.timerEndsAt = Date.now() + state.timerSeconds * 1000;
       clearInterval(state.timerId);
@@ -1117,7 +1201,13 @@ Peter</textarea>
       state.timerRunning = false;
       clearInterval(state.timerId);
       state.timerId = null;
+      state.timerFinished = false;
       setTimerFromInput();
+    }
+
+    function dismissTimeUp() {
+      state.timerFinished = false;
+      renderTimer();
     }
 
     function pairKey(a, b) {
@@ -1149,7 +1239,7 @@ Peter</textarea>
         x: 18 + ((col + 0.5) / columns) * 70,
         y: 16 + ((row + 0.5) / rows) * 62,
         angle: 0,
-        shape: "square"
+        shape: "long"
       };
     }
 
@@ -1185,7 +1275,7 @@ Peter</textarea>
     function toggleSelectedShape() {
       const table = selectedVenueTable();
       if (!table) return;
-      const shapes = ["square", "long", "round"];
+      const shapes = ["long", "round"];
       const nextIndex = (shapes.indexOf(table.shape) + 1) % shapes.length;
       table.shape = shapes[nextIndex];
       renderVenueMap();
@@ -1213,12 +1303,16 @@ Peter</textarea>
       return "translate(-50%, -50%)";
     }
 
-    function getMapNameFontSize(members, shape) {
+    function tableAngleClass(table) {
+      return table.angle % 180 === 0 ? "straight-angle" : "right-angle";
+    }
+
+    function getMapNameFontSize(members, shape, angle) {
       if (!members.length) return 10;
       const longest = Math.max(...members.map(name => Array.from(name).length));
-      const base = shape === "round" ? 11 : 12;
+      const base = shape === "round" ? 11 : angle % 180 === 0 ? 12 : 10.4;
       const crowdPenalty = Math.max(0, members.length - 4) * 0.9;
-      const lengthPenalty = Math.max(0, longest - 6) * 0.55;
+      const lengthPenalty = Math.max(0, longest - (angle % 180 === 0 ? 6 : 5)) * 0.55;
       return Math.max(7.5, Math.min(base, base - crowdPenalty - lengthPenalty));
     }
 
@@ -1257,7 +1351,7 @@ Peter</textarea>
       const tableMarkup = state.venueTables.map(table => `
         <button
           type="button"
-          class="map-table ${table.shape} ${table.id === state.selectedTable ? "selected" : ""} ${table.id === found.tableId ? "found" : ""}"
+          class="map-table ${table.shape} ${tableAngleClass(table)} ${table.id === state.selectedTable ? "selected" : ""} ${table.id === found.tableId ? "found" : ""}"
           data-table-id="${table.id}"
           style="left: ${table.x}%; top: ${table.y}%; transform: ${tableTransform(table)};"
           aria-label="Table ${table.id}"
@@ -1281,7 +1375,7 @@ Peter</textarea>
     function renderMapNames(table) {
       const members = getTableMembers(table.id);
       if (!members.length) return "";
-      const fontSize = getMapNameFontSize(members, table.shape);
+      const fontSize = getMapNameFontSize(members, table.shape, table.angle);
       return `
         <div class="map-names" style="font-size: ${fontSize}px;">
           ${members.map(name => `<div class="map-name" title="${escapeHtml(name)}">${escapeHtml(name)}</div>`).join("")}
@@ -1896,6 +1990,7 @@ Peter</textarea>
     els.timerPlusBtn.addEventListener("click", () => changeTimerMinutes(1));
     els.timerMinutes.addEventListener("input", resetTimer);
     els.timerMinutes.addEventListener("change", resetTimer);
+    els.timeUpDismissBtn.addEventListener("click", dismissTimeUp);
     els.copyBtn.addEventListener("click", copyRecords);
     els.editMapBtn.addEventListener("click", () => {
       state.mapEditing = !state.mapEditing;
